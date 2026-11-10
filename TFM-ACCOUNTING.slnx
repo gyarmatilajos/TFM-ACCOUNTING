@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="TFM-ACCOUNTING.Business/TFM-ACCOUNTING.Business.csproj" />
+  <Project Path="TFM-ACCOUNTING.Data/TFM-ACCOUNTING.Data.csproj" />
+  <Project Path="TFM-ACCOUNTING.Desktop/TFM-ACCOUNTING.Desktop.csproj" />
+</Solution>
