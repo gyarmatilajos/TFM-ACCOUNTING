@@ -1,24 +1,131 @@
-﻿using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using TFM_ACCOUNTING.Business;
+using TFM_ACCOUNTING.Desktop.ViewModels;
+using TFM_ACCOUNTING.Desktop.Views;
 
-namespace TFM_ACCOUNTING.Desktop
+namespace TFM_ACCOUNTING.Desktop;
+
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    private readonly OwnCompaniesViewModel? companies;
+    private readonly SettingsViewModel? settings;
+    private readonly PartnersViewModel? partners;
+    private bool settingsLoaded;
+    private bool partnersLoaded;
+    private bool companiesLoaded;
+    private string currentPage = "obligations";
+
+    public MainWindow()
     {
-        public MainWindow()
+        InitializeComponent();
+        try
         {
-            InitializeComponent();
+            var services = new ApplicationServices();
+            ObligationsView.Service = services.Obligations;
+            UpdateNavigation();
+            companies = new OwnCompaniesViewModel(services.OwnCompanies, () => MessageBox.Show(this,
+                "A nem mentett módosítások elvesznek. Folytatod?", "Nem mentett adatok", MessageBoxButton.YesNo,
+                MessageBoxImage.Question) == MessageBoxResult.Yes);
+            settings = new SettingsViewModel(key => services.Settings.Create(key));
+            partners = new PartnersViewModel(services.Partners, () => MessageBox.Show(this,
+                "A nem mentett módosítások elvesznek. Folytatod?", "Nem mentett adatok", MessageBoxButton.YesNo,
+                MessageBoxImage.Question) == MessageBoxResult.Yes, warnings =>
+            {
+                var dialog = new PartnerNameMatchDialog(warnings) { Owner = this };
+                dialog.ShowDialog();
+                return dialog.Decision;
+            });
+            CompaniesView.DataContext = companies;
+            PartnersView.DataContext = partners;
+            SettingsView.DataContext = settings;
+            DatabaseLabel.Text = services.DatabaseDescription;
+            Loaded += async (_, _) => await ObligationsView.InitializeAsync();
+            Closing += (_, e) => { if (!MayLeaveCurrentPage()) e.Cancel = true; };
         }
+        catch (ArgumentException)
+        {
+            DatabaseLabel.Text = "Hibás adatbázis-kapcsolat. Ellenőrizd a TFM_ACCOUNTING_CONNECTION_STRING beállítást.";
+            ObligationsView.IsEnabled = CompaniesView.IsEnabled = PartnersView.IsEnabled = SettingsView.IsEnabled = false;
+        }
+    }
+
+    private async void ShowObligations(object sender, RoutedEventArgs e)
+    {
+        if (currentPage == "obligations" || !MayLeaveCurrentPage()) return;
+        currentPage = "obligations";
+        UpdateNavigation();
+        CompaniesView.Visibility = PartnersView.Visibility = SettingsView.Visibility = Visibility.Collapsed;
+        ObligationsView.Visibility = Visibility.Visible;
+        await ObligationsView.InitializeAsync();
+    }
+
+    private async void ShowCompanies(object sender, RoutedEventArgs e)
+    {
+        if (currentPage == "companies" || !MayLeaveCurrentPage()) return;
+        currentPage = "companies";
+        UpdateNavigation();
+        CompaniesView.Visibility = Visibility.Visible;
+        ObligationsView.Visibility = Visibility.Collapsed;
+        PartnersView.Visibility = Visibility.Collapsed;
+        SettingsView.Visibility = Visibility.Collapsed;
+        if (!companiesLoaded && companies is not null)
+        {
+            await companies.InitializeAsync();
+            companiesLoaded = true;
+        }
+    }
+    private async void ShowSettings(object sender, RoutedEventArgs e)
+    {
+        if (currentPage == "settings" || !MayLeaveCurrentPage()) return;
+        currentPage = "settings";
+        UpdateNavigation();
+        ObligationsView.Visibility = Visibility.Collapsed;
+        CompaniesView.Visibility = Visibility.Collapsed;
+        PartnersView.Visibility = Visibility.Collapsed;
+        SettingsView.Visibility = Visibility.Visible;
+        if (!settingsLoaded && settings is not null)
+        {
+            await settings.InitializeAsync();
+            settingsLoaded = true;
+        }
+    }
+
+    private async void ShowPartners(object sender, RoutedEventArgs e)
+    {
+        if (currentPage == "partners" || !MayLeaveCurrentPage()) return;
+        currentPage = "partners";
+        UpdateNavigation();
+        ObligationsView.Visibility = Visibility.Collapsed;
+        CompaniesView.Visibility = SettingsView.Visibility = Visibility.Collapsed;
+        PartnersView.Visibility = Visibility.Visible;
+        if (!partnersLoaded && partners is not null)
+        {
+            await partners.InitializeAsync();
+            partnersLoaded = true;
+        }
+        else if (partners is not null) await partners.ReloadTypesAsync();
+    }
+
+    private bool MayLeaveCurrentPage() => currentPage switch
+    {
+        "obligations" => !ObligationsView.IsBusy,
+        "companies" => companies?.MayLeave() ?? true,
+        "partners" => partners?.MayLeave() ?? true,
+        _ => settings?.IsBusy != true
+    };
+
+    private void UpdateNavigation()
+    {
+        void Highlight(Button button, bool selected)
+        {
+            button.Background = new SolidColorBrush(selected ? Color.FromRgb(0, 127, 135) : Color.FromRgb(232, 238, 246));
+            button.Foreground = selected ? Brushes.White : Brushes.Black;
+        }
+        Highlight(CompaniesButton, currentPage == "companies");
+        Highlight(ObligationsButton, currentPage == "obligations");
+        Highlight(PartnersButton, currentPage == "partners");
+        Highlight(SettingsButton, currentPage == "settings");
     }
 }

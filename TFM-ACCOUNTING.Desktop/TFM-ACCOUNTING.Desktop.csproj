@@ -9,4 +9,7 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TFM-ACCOUNTING.Business\TFM-ACCOUNTING.Business.csproj" />
+  </ItemGroup>
 </Project>

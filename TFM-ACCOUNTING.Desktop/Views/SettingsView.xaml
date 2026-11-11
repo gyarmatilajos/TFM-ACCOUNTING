@@ -1,0 +1,99 @@
+<UserControl x:Class="TFM_ACCOUNTING.Desktop.Views.SettingsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" FontSize="14">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanVisibility" />
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#CBD5E1" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="Margin" Value="0,5,0,16" />
+        </Style>
+    </UserControl.Resources>
+    <Grid Background="#F4F6FA">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" /><ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Border Background="#E8EEF6" Padding="16,24">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="Törzsadatok" FontSize="22" FontWeight="Bold" Foreground="#102A49" />
+                    
+                    
+                    <TextBlock Text="Törzsadatok kezelése" Foreground="#64748B" Margin="0,6,0,18" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
+                         DisplayMemberPath="Name" IsEnabled="{Binding IsIdle}"
+                         Background="Transparent" BorderThickness="0" Foreground="#102A49">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="8,12" /><Setter Property="Margin" Value="0,0,0,5" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Column="1" Margin="28">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                <RowDefinition Height="*" /><RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,22">
+                <TextBlock Text="{Binding SelectedGroup.Name}" FontSize="28" FontWeight="SemiBold" Foreground="#102A49" />
+                <TextBlock Text="Új bejegyzések felvétele, módosítása és aktív állapotuk kezelése."
+                           Foreground="#64748B" Margin="0,6,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
+                <Button Content="+ Új bejegyzés" Command="{Binding NewCommand}" Background="#007F87" Foreground="White" />
+                <Button Content="Frissítés" Command="{Binding ReloadCommand}" />
+                <Button Content="{Binding ToggleActiveText}" Command="{Binding ToggleActiveCommand}" />
+            </StackPanel>
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="20" /><ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+                <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" IsEnabled="{Binding IsIdle}"
+                          AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow"
+                          CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" RowHeight="42"
+                          Background="White" BorderBrush="#DCE3ED">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Megnevezés" Binding="{Binding Name}" Width="*" MinWidth="240" />
+                        <DataGridCheckBoxColumn Header="Aktív" Binding="{Binding IsActive}" Width="65" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Border Grid.Column="2" Background="White" BorderBrush="#DCE3ED" BorderThickness="1" CornerRadius="8" Padding="20">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Bottom" Content="Mentés" Command="{Binding SaveCommand}"
+                                Background="#007F87" Foreground="White" Margin="0,12,0,0" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel IsEnabled="{Binding IsIdle}">
+                            <TextBlock Text="{Binding EditorTitle}" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,18" />
+                            <TextBlock Text="Megnevezés *" />
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" />
+                            <StackPanel Visibility="{Binding HasBehavior, Converter={StaticResource BooleanVisibility}}">
+                                <TextBlock Text="Működés *" />
+                                <ComboBox ItemsSource="{Binding Behaviors}" DisplayMemberPath="Name" SelectedValuePath="Key"
+                                          SelectedValue="{Binding BehaviorKey}" IsEnabled="{Binding CanChooseBehavior}"
+                                          Margin="0,6,0,8" Padding="5" />
+                                <TextBlock Text="A működés létrehozás után nem változtatható." TextWrapping="Wrap"
+                                           Foreground="#64748B" FontSize="12" Margin="0,0,0,16" />
+                            </StackPanel>
+                            <TextBlock Text="Megjegyzés" />
+                            <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000"
+                                     AcceptsReturn="True" TextWrapping="Wrap" Height="120" VerticalScrollBarVisibility="Auto" />
+                            <CheckBox Content="Aktív" IsChecked="{Binding IsActive}" Margin="0,0,0,18" />
+                        </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+            <Border Grid.Row="3" Background="#E8EEF6" Padding="14" CornerRadius="6" Margin="0,18,0,0">
+                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="#102A49" />
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
+

@@ -7,4 +7,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TFM-ACCOUNTING.Data\TFM-ACCOUNTING.Data.csproj" />
+  </ItemGroup>
 </Project>
