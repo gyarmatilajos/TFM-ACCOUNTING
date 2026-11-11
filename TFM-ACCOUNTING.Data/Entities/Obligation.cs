@@ -11,7 +11,7 @@ public sealed class Obligation : IAuditable
     public ObligationType ObligationType { get; set; } = null!;
     public int? CategoryId { get; set; }
     public CostCategory? Category { get; set; }
-    public required string Description { get; set; }
+    public string? Description { get; set; }
     public int? PeriodYear { get; set; }
     public int? PeriodMonth { get; set; }
     public DateOnly DueDate { get; set; }

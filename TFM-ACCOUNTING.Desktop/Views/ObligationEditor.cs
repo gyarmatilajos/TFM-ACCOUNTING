@@ -12,9 +12,11 @@ internal sealed class ObligationEditor : Window
     private readonly ComboBox company = new(), partner = new(), type = new(), category = new(),
         payment = new(), invoiceType = new(), original = new();
     private readonly TextBox description = new() { MaxLength = 200 }, notes = new() { MaxLength = 2000, AcceptsReturn = true, Height = 65 },
-        amount = new(), year = new() { MaxLength = 4 }, month = new() { MaxLength = 2 },
+        amount = new(),
         number = new() { MaxLength = 100 }, net = new(), vat = new();
+    private readonly ComboBox year = new(), month = new();
     private readonly DatePicker due = new(), issue = new(), performance = new();
+    private readonly StackPanel periodPanel = new();
     private readonly StackPanel invoicePanel = new();
     private readonly Button save = new() { Content = "Mentés", MinWidth = 110, Padding = new Thickness(12, 7, 12, 7) };
     private readonly TextBlock feedback = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) };
@@ -55,11 +57,11 @@ internal sealed class ObligationEditor : Window
         Field(fields, "Partner / jogosult *", partner);
         Field(fields, "Kötelezettségtípus *", type);
         Field(fields, "Költségkategória", category);
-        Field(fields, "Leírás *", description);
+        Field(fields, "Leírás", description);
         Field(fields, "Határidő *", due);
         Field(fields, "Fizetendő összeg (Ft) *", amount);
-        Field(fields, "Vonatkozási év", year);
-        Field(fields, "Vonatkozási hónap (1–12)", month);
+        fields.Children.Add(periodPanel);
+        AddPeriodFields(input);
         Field(fields, "Tervezett fizetési mód", payment);
         Field(fields, "Megjegyzés", notes);
         fields.Children.Add(invoicePanel);
@@ -82,8 +84,6 @@ internal sealed class ObligationEditor : Window
         description.Text = input?.Description ?? "";
         notes.Text = input?.Notes ?? "";
         amount.Text = input?.Amount.ToString("0.##", CultureInfo.CurrentCulture) ?? "";
-        year.Text = input?.Year?.ToString() ?? "";
-        month.Text = input?.Month?.ToString() ?? "";
         due.SelectedDate = input?.DueDate.ToDateTime(TimeOnly.MinValue);
         number.Text = input?.Invoice?.Number ?? "";
         issue.SelectedDate = input?.Invoice?.IssueDate.ToDateTime(TimeOnly.MinValue);
@@ -132,8 +132,34 @@ internal sealed class ObligationEditor : Window
                decimal.TryParse(text.Trim(), style, CultureInfo.InvariantCulture, out value);
     }
 
-    private void UpdateInvoiceVisibility() => invoicePanel.Visibility =
-        type.SelectedItem is ObligationOption { HasInvoiceDetails: true } ? Visibility.Visible : Visibility.Collapsed;
+    private void AddPeriodFields(ObligationInput? input)
+    {
+        var today = DateTime.Today;
+        var months = CultureInfo.GetCultureInfo("hu-HU").DateTimeFormat;
+        var yearOptions = Enumerable.Range(1, 9999).Select(value => new ObligationOption(value, value.ToString(), true));
+        var monthOptions = Enumerable.Range(1, 12).Select(value => new ObligationOption(value, months.GetMonthName(value), true));
+        year.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel)));
+        VirtualizingStackPanel.SetIsVirtualizing(year, true);
+        ScrollViewer.SetCanContentScroll(year, true);
+        SetOptions(year, yearOptions, input is null ? today.Year : input.Year, true);
+        SetOptions(month, monthOptions, input is null ? today.Month : input.Month, true);
+
+        var selectors = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
+        var yearField = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+        var monthField = new StackPanel();
+        Field(yearField, "Vonatkozási év", year);
+        Field(monthField, "Vonatkozási hónap", month);
+        selectors.Children.Add(yearField);
+        selectors.Children.Add(monthField);
+        periodPanel.Children.Add(selectors);
+    }
+
+    private void UpdateInvoiceVisibility()
+    {
+        var selectedType = type.SelectedItem as ObligationOption;
+        invoicePanel.Visibility = selectedType?.HasInvoiceDetails == true ? Visibility.Visible : Visibility.Collapsed;
+        periodPanel.Visibility = selectedType is { HasInvoiceDetails: false } ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     private async Task LoadOriginalsAsync(int? selected = null)
     {
@@ -154,10 +180,9 @@ internal sealed class ObligationEditor : Window
     private async Task SaveAsync()
     {
         if (loadingOriginals || saving) return;
-        if (!Money(amount.Text, out var value) || Date(due) is not DateOnly dueDate ||
-            !OptionalInt(year.Text, out var periodYear) || !OptionalInt(month.Text, out var periodMonth))
+        if (!Money(amount.Text, out var value) || Date(due) is not DateOnly dueDate)
         {
-            feedback.Text = "Ellenőrizd az összeget, a határidőt és a vonatkozási időszakot.";
+            feedback.Text = "Ellenőrizd az összeget és a határidőt.";
             return;
         }
         InvoiceInput? invoice = null;
@@ -173,7 +198,7 @@ internal sealed class ObligationEditor : Window
         }
 
         var input = new ObligationInput(Id(company) ?? 0, Id(partner) ?? 0, Id(type) ?? 0,
-            Id(category), description.Text, periodYear, periodMonth, dueDate, value, Id(payment),
+            Id(category), description.Text, invoice is null ? Id(year) : null, invoice is null ? Id(month) : null, dueDate, value, Id(payment),
             invoice is null ? null : Id(original), notes.Text, invoice, details?.Input.Version);
         saving = true;
         ((UIElement)Content).IsEnabled = false;
@@ -189,12 +214,4 @@ internal sealed class ObligationEditor : Window
             ? string.Join(Environment.NewLine, result.ValidationErrors.Select(x => x.Message)) : result.Message;
     }
 
-    private static bool OptionalInt(string text, out int? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(text)) return true;
-        if (!int.TryParse(text, out var parsed)) return false;
-        value = parsed;
-        return true;
-    }
 }

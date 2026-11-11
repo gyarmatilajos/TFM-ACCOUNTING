@@ -99,7 +99,8 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var term = filter.Search.Trim();
-            rows = rows.Where(x => x.Description.Contains(term) || (x.InvoiceDetails != null && x.InvoiceDetails.InvoiceNumber.Contains(term)));
+            rows = rows.Where(x => (x.Description != null && x.Description.Contains(term)) ||
+                (x.InvoiceDetails != null && x.InvoiceDetails.InvoiceNumber.Contains(term)));
         }
         if (filter.From is DateOnly from) rows = filter.DateField switch
         {
@@ -143,6 +144,10 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
             (oldInvoice is not null && input.Invoice is not null && !SameVersion(oldInvoice.RowVersion, input.Invoice.Version))))
             return Conflict<int>();
 
+        // Invoice periods always follow performance, including when the invoice is edited.
+        if (input.Invoice is { } invoicePeriod)
+            input = input with { Year = invoicePeriod.PerformanceDate.Year, Month = invoicePeriod.PerformanceDate.Month };
+
         var error = await ValidateAsync(db, row, input);
         if (error is not null) return Response<int>.Invalid([error]);
         if (input.Invoice is { } invoice && await db.InvoiceDetails.AnyAsync(x =>
@@ -166,13 +171,13 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
         }
         if (row is null)
         {
-            row = new Obligation { Description = input.Description.Trim(), OwnCompanyId = input.CompanyId, PartnerId = input.PartnerId };
+            row = new Obligation { OwnCompanyId = input.CompanyId, PartnerId = input.PartnerId };
             db.Obligations.Add(row);
         }
         else db.Entry(row).Property(x => x.UpdatedAtUtc).IsModified = true;
 
         row.ObligationTypeId = input.TypeId;
-        row.Description = input.Description.Trim();
+        row.Description = string.IsNullOrWhiteSpace(input.Description) ? null : input.Description.Trim();
         row.CategoryId = input.CategoryId;
         row.PeriodYear = input.Year;
         row.PeriodMonth = input.Month;
@@ -211,8 +216,10 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
 
     private static async Task<ValidationError?> ValidateAsync(AccountingDbContext db, Obligation? row, ObligationInput input)
     {
-        if (string.IsNullOrWhiteSpace(input.Description) || input.Description.Trim().Length > 200 || input.Notes?.Trim().Length > 2000)
-            return new("Description", "Adj meg legfeljebb 200 karakteres leírást és legfeljebb 2000 karakteres megjegyzést.");
+        if (input.Description?.Trim().Length > 200)
+            return new("Description", "A leírás legfeljebb 200 karakteres lehet.");
+        if (input.Notes?.Trim().Length > 2000)
+            return new("Notes", "A megjegyzés legfeljebb 2000 karakteres lehet.");
         if (input.DueDate == default || input.Amount == 0 || !ValidAmount(input.Amount))
             return new("Amount", "Adj meg határidőt és nem nulla összeget, legfeljebb két tizedesjeggyel.");
 

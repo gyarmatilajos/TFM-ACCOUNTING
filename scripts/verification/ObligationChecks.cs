@@ -17,26 +17,37 @@ static class ObligationChecks
         var normal = options.InvoiceTypes.First(x => !x.RequiresOriginal);
         var correction = options.InvoiceTypes.First(x => x.RequiresOriginal);
         var date = DateOnly.FromDateTime(DateTime.Today).AddDays(-1);
+        var performanceDate = date.AddMonths(-1);
         var draft = new ObligationInput(companies[0].Id, partner.Id, invoiceType.Id, null, "Teszt számla", null, null,
-            date, 12700, null, null, null, new("CHECK-INV-1", normal.Id, date, date, 10000, 2700));
+            date, 12700, null, null, null, new("CHECK-INV-1", normal.Id, date, performanceDate, 10000, 2700));
         Check((await service.SaveAsync(null, draft with { Amount = 1 })).ErrorCode == ErrorCode.Validation, "Invalid gross accepted.");
         Check((await service.SaveAsync(null, draft with { TypeId = periodType.Id, Invoice = null })).ErrorCode == ErrorCode.Validation, "Missing period accepted.");
         var id = Require(await service.SaveAsync(null, draft));
         Check((await service.SaveAsync(null, draft)).ErrorCode == ErrorCode.Duplicate, "Duplicate invoice accepted.");
         var original = Require(await service.GetAsync(id));
-        var movedId = Require(await service.SaveAsync(id, original.Input with { CompanyId = companies[1].Id }));
+        Check(original.Input.Year == performanceDate.Year && original.Input.Month == performanceDate.Month, "Invoice period did not follow performance.");
+        var correctedPerformance = performanceDate.AddMonths(-1);
+        var movedId = Require(await service.SaveAsync(id, original.Input with
+        {
+            CompanyId = companies[1].Id,
+            Invoice = original.Input.Invoice! with { PerformanceDate = correctedPerformance }
+        }));
         Check(movedId == id, "Party change replaced obligation identity.");
         Check((await service.SaveAsync(id, original.Input)).ErrorCode == ErrorCode.ConcurrencyConflict, "Stale edit accepted.");
         var moved = Require(await service.GetAsync(id));
+        Check(moved.Input.Year == correctedPerformance.Year && moved.Input.Month == correctedPerformance.Month, "Invoice period was not updated with performance.");
+        Check(Require(await service.ListAsync(new(Search: "CHECK-INV-1", DateField: "period", From: correctedPerformance, To: correctedPerformance)))
+            .Page.TotalCount == 1, "Invoice period filter does not use performance.");
         Check(moved.Input.CompanyId == companies[1].Id && moved.Input.Invoice?.Number == "CHECK-INV-1", "Party change did not preserve invoice.");
 
         var credit = draft with
         {
-            CompanyId = companies[1].Id, Amount = -1270, OriginalId = id,
+            CompanyId = companies[1].Id, Amount = -1270, OriginalId = id, Description = " ",
             Invoice = new("CHECK-INV-2", correction.Id, date, date, -1000, -2700 / 10m)
         };
         Check((await service.SaveAsync(null, credit with { OriginalId = null })).ErrorCode == ErrorCode.Validation, "Correction without original accepted.");
         var creditId = Require(await service.SaveAsync(null, credit));
+        Check(Require(await service.GetAsync(creditId)).Input.Description is null, "Blank description did not save as null.");
         Check((await service.SaveAsync(id, moved.Input with { OriginalId = creditId })).ErrorCode == ErrorCode.Validation, "Invoice cycle accepted.");
 
         await using (var db = await factory.CreateDbContextAsync())

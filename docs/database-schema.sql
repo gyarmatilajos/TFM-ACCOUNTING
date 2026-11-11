@@ -144,7 +144,7 @@ CREATE TABLE [Obligations] (
     [PartnerId] int NOT NULL,
     [ObligationTypeId] int NOT NULL,
     [CategoryId] int NULL,
-    [Description] nvarchar(200) NOT NULL,
+    [Description] nvarchar(200) NULL,
     [PeriodYear] int NULL,
     [PeriodMonth] int NULL,
     [DueDate] date NOT NULL,

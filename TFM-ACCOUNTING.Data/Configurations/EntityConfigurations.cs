@@ -72,7 +72,7 @@ public sealed class ObligationConfiguration : IEntityTypeConfiguration<Obligatio
     public void Configure(EntityTypeBuilder<Obligation> b)
     {
         ConfigurationDefaults.Common(b);
-        b.Property(x => x.Description).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(200);
         b.Property(x => x.Amount).HasPrecision(18, 2);
         b.HasOne(x => x.OwnCompany).WithMany().HasForeignKey(x => x.OwnCompanyId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Partner).WithMany().HasForeignKey(x => x.PartnerId).OnDelete(DeleteBehavior.Restrict);

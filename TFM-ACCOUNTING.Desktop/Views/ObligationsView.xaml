@@ -49,16 +49,15 @@
                   CanUserSortColumns="False" SelectionMode="Single" HeadersVisibility="Column"
                   SelectionChanged="SelectionChanged" MouseDoubleClick="Edit" Background="White">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Leírás" Binding="{Binding Description}" Width="*" MinWidth="145"/>
+                <DataGridTextColumn Header="Saját cég" Binding="{Binding Company}" Width="*" MinWidth="105"/>
+                <DataGridTextColumn Header="Partner" Binding="{Binding Partner}" Width="*" MinWidth="110"/>
                 <DataGridTextColumn Header="Bizonylatszám" Binding="{Binding Number}" Width="115"/>
-                <DataGridTextColumn Header="Saját cég" Binding="{Binding Company}" Width="105"/>
-                <DataGridTextColumn Header="Partner" Binding="{Binding Partner}" Width="110"/>
                 <DataGridTextColumn Header="Típus" Binding="{Binding Type}" Width="105"/>
                 <DataGridTextColumn Header="Határidő" Binding="{Binding DueDate, StringFormat=yyyy.MM.dd.}" Width="100"/>
                 <DataGridTextColumn Header="Összeg (Ft)" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
                 <DataGridTextColumn Header="Hátralék (Ft)" Binding="{Binding Balance, StringFormat=N2}" Width="105"/>
                 <DataGridTextColumn Header="Állapot" Binding="{Binding Status}" Width="115"/>
-                <DataGridCheckBoxColumn Header="Lejárt" Binding="{Binding IsOverdue}" Width="55"/>
+                <DataGridCheckBoxColumn Header="Lejárt" Binding="{Binding IsOverdue, Mode=OneWay}" Width="55"/>
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

@@ -104,7 +104,17 @@ var renderThread = new Thread(() =>
         png.Save(file);
         OwnCompanyChecks.RenderPreview();
         PartnerChecks.RenderPreview();
-        _ = new TFM_ACCOUNTING.Desktop.Views.ObligationsView();
+        var obligations = new TFM_ACCOUNTING.Desktop.Views.ObligationsView();
+        var grid = (System.Windows.Controls.DataGrid)obligations.FindName("Rows");
+        var overdue = new TFM_ACCOUNTING.Business.Obligations.ObligationRow(
+            1, "Minta Kft.", "Partner Kft.", "Számla", "Lejárt tétel", "TESZT-1",
+            DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1000m, 0m, false, false);
+        grid.ItemsSource = new[] { overdue };
+        obligations.Measure(new Size(1250, 820));
+        obligations.Arrange(new Rect(0, 0, 1250, 820));
+        obligations.UpdateLayout();
+        var overdueCell = grid.Columns.Single(x => (string)x.Header == "Lejárt").GetCellContent(overdue);
+        Check(overdueCell is System.Windows.Controls.CheckBox { IsChecked: true }, "Overdue indicator did not render for a populated row.");
     }
     catch (Exception ex) { renderError = ex; }
 });
