@@ -86,6 +86,13 @@ var renderThread = new Thread(() =>
 {
     try
     {
+        var application = new Application
+        {
+            Resources = new ResourceDictionary
+            {
+                Source = new Uri("/TFM-ACCOUNTING.Desktop;component/Themes/Accounting.xaml", UriKind.Relative)
+            }
+        };
         var viewModel = new SettingsViewModel(_ => new PreviewService());
         viewModel.SelectedGroup = SettingsCatalog.Groups.Single(x => x.Key == "obligation-types");
         Check(viewModel.Items.Count == 4, "Settings group switching did not reload rows.");
@@ -104,17 +111,53 @@ var renderThread = new Thread(() =>
         png.Save(file);
         OwnCompanyChecks.RenderPreview();
         PartnerChecks.RenderPreview();
-        var obligations = new TFM_ACCOUNTING.Desktop.Views.ObligationsView();
+        var window = new TFM_ACCOUNTING.Desktop.MainWindow();
+        var shell = (FrameworkElement)window.Content;
+        var obligations = (TFM_ACCOUNTING.Desktop.Views.ObligationsView)window.FindName("ObligationsView");
         var grid = (System.Windows.Controls.DataGrid)obligations.FindName("Rows");
+        var primaryFilters = (System.Windows.Controls.Panel)obligations.FindName("PrimaryFilters");
+        foreach (var (index, name) in new[] { (0, "Összes cég"), (1, "Összes partner") })
+        {
+            var combo = (System.Windows.Controls.ComboBox)((System.Windows.Controls.Panel)primaryFilters.Children[index]).Children[1];
+            combo.ItemsSource = new[] { name };
+            combo.SelectedIndex = 0;
+        }
         var overdue = new TFM_ACCOUNTING.Business.Obligations.ObligationRow(
             1, "Minta Kft.", "Partner Kft.", "Számla", "Lejárt tétel", "TESZT-1",
             DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1000m, 0m, false, false);
-        grid.ItemsSource = new[] { overdue };
-        obligations.Measure(new Size(1250, 820));
-        obligations.Arrange(new Rect(0, 0, 1250, 820));
-        obligations.UpdateLayout();
-        var overdueCell = grid.Columns.Single(x => (string)x.Header == "Lejárt").GetCellContent(overdue);
-        Check(overdueCell is System.Windows.Controls.CheckBox { IsChecked: true }, "Overdue indicator did not render for a populated row.");
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        grid.ItemsSource = new[]
+        {
+            overdue with { Partner = "MVM Next Energiakereskedelmi Zrt.", Amount = 320000, HasAttachment = true },
+            overdue with { Id = 2, Partner = "Telekom Magyarország Nyrt.", Number = "INV-2026-1042", DueDate = today, Amount = 85000, Settled = 85000, HasAttachment = true },
+            overdue with { Id = 3, Partner = "Kovács Anna", Number = null, Type = "Nettó bér", DueDate = today, Amount = 850000 },
+            overdue with { Id = 4, Partner = "NAV (Nemzeti Adó- és Vámhivatal)", Number = null, Type = "Járulék", DueDate = today, Amount = 1420000, Settled = 800000 },
+            overdue with { Id = 5, Partner = "Iroda Plusz Kft.", Number = "IP-2026-0218", DueDate = today.AddDays(2), Amount = 245000, HasAttachment = true },
+            overdue with { Id = 6, Partner = "Nagy Péter", Number = null, Type = "Nettó bér", DueDate = today.AddDays(5), Amount = 760000 },
+            overdue with { Id = 7, Partner = "Telekom Magyarország Nyrt.", Number = "INV-2026-1077", DueDate = today.AddDays(5), Amount = 135000, HasAttachment = true }
+        };
+        grid.SelectedIndex = 4;
+        foreach (var (name, text) in new[]
+        {
+            ("PayableLabel", "2 930 000 Ft"), ("OverdueLabel", "320 000 Ft"), ("DueSoonLabel", "2 610 000 Ft"),
+            ("MonthlyPaidLabel", "885 000 Ft"), ("CreditLabel", "Felhasználható jóváírás: 0 Ft"), ("StatusLabel", "1. oldal / 1 · 7 tétel")
+        })
+            ((System.Windows.Controls.TextBlock)obligations.FindName(name)).Text = text;
+        shell.Measure(new Size(1440, 880));
+        shell.Arrange(new Rect(0, 0, 1440, 880));
+        shell.UpdateLayout();
+        shell.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        shell.UpdateLayout();
+        var preview = new RenderTargetBitmap(1440, 880, 96, 96, PixelFormats.Pbgra32);
+        preview.Render(shell);
+        var statusColumn = grid.Columns.Single(x => x.Header is string header && header == "Állapot");
+        var cell = statusColumn.GetCellContent(grid.Items[0]) as System.Windows.Controls.ContentPresenter;
+        Check(cell?.ContentTemplate.FindName("StateText", cell) is System.Windows.Controls.TextBlock { Text: "Lejárt" },
+            "Overdue badge did not render for a populated row.");
+        var previewEncoder = new PngBitmapEncoder();
+        previewEncoder.Frames.Add(BitmapFrame.Create(preview));
+        using var previewFile = File.Create("obj/ModelVerification/obligations-preview.png");
+        previewEncoder.Save(previewFile);
     }
     catch (Exception ex) { renderError = ex; }
 });

@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using TFM_ACCOUNTING.Business;
 using TFM_ACCOUNTING.Desktop.ViewModels;
 using TFM_ACCOUNTING.Desktop.Views;
@@ -24,14 +23,12 @@ public partial class MainWindow : Window
         {
             var services = new ApplicationServices();
             ObligationsView.Service = services.Obligations;
+            ObligationsView.Attachments = services.Attachments;
+            SettingsView.AttachmentFolder = services.AttachmentFolder;
             UpdateNavigation();
-            companies = new OwnCompaniesViewModel(services.OwnCompanies, () => MessageBox.Show(this,
-                "A nem mentett módosítások elvesznek. Folytatod?", "Nem mentett adatok", MessageBoxButton.YesNo,
-                MessageBoxImage.Question) == MessageBoxResult.Yes);
+            companies = new OwnCompaniesViewModel(services.OwnCompanies, ConfirmDiscardChanges);
             settings = new SettingsViewModel(key => services.Settings.Create(key));
-            partners = new PartnersViewModel(services.Partners, () => MessageBox.Show(this,
-                "A nem mentett módosítások elvesznek. Folytatod?", "Nem mentett adatok", MessageBoxButton.YesNo,
-                MessageBoxImage.Question) == MessageBoxResult.Yes, warnings =>
+            partners = new PartnersViewModel(services.Partners, ConfirmDiscardChanges, warnings =>
             {
                 var dialog = new PartnerNameMatchDialog(warnings) { Owner = this };
                 dialog.ShowDialog();
@@ -50,6 +47,9 @@ public partial class MainWindow : Window
             ObligationsView.IsEnabled = CompaniesView.IsEnabled = PartnersView.IsEnabled = SettingsView.IsEnabled = false;
         }
     }
+
+    private bool ConfirmDiscardChanges() => AccountingUi.Confirm(this, "Nem mentett adatok",
+        "A nem mentett módosítások elvesznek. Folytatod?", "Folytatás", "\uE72A", true);
 
     private async void ShowObligations(object sender, RoutedEventArgs e)
     {
@@ -76,10 +76,14 @@ public partial class MainWindow : Window
             companiesLoaded = true;
         }
     }
-    private async void ShowSettings(object sender, RoutedEventArgs e)
+    private async void ShowSettings(object sender, RoutedEventArgs e) => await OpenSettingsAsync("settings");
+
+    private async void ShowCategories(object sender, RoutedEventArgs e) => await OpenSettingsAsync("categories");
+
+    private async Task OpenSettingsAsync(string page)
     {
-        if (currentPage == "settings" || !MayLeaveCurrentPage()) return;
-        currentPage = "settings";
+        if (currentPage == page || !MayLeaveCurrentPage()) return;
+        currentPage = page;
         UpdateNavigation();
         ObligationsView.Visibility = Visibility.Collapsed;
         CompaniesView.Visibility = Visibility.Collapsed;
@@ -90,6 +94,8 @@ public partial class MainWindow : Window
             await settings.InitializeAsync();
             settingsLoaded = true;
         }
+        if (page == "categories" && settings is not null)
+            settings.SelectedGroup = settings.Groups.First(x => x.Key == "cost-categories");
     }
 
     private async void ShowPartners(object sender, RoutedEventArgs e)
@@ -118,14 +124,12 @@ public partial class MainWindow : Window
 
     private void UpdateNavigation()
     {
-        void Highlight(Button button, bool selected)
-        {
-            button.Background = new SolidColorBrush(selected ? Color.FromRgb(0, 127, 135) : Color.FromRgb(232, 238, 246));
-            button.Foreground = selected ? Brushes.White : Brushes.Black;
-        }
+        static void Highlight(Button button, bool selected) =>
+            button.SetValue(System.Windows.Controls.Primitives.Selector.IsSelectedProperty, selected);
         Highlight(CompaniesButton, currentPage == "companies");
         Highlight(ObligationsButton, currentPage == "obligations");
         Highlight(PartnersButton, currentPage == "partners");
+        Highlight(CategoriesButton, currentPage == "categories");
         Highlight(SettingsButton, currentPage == "settings");
     }
 }

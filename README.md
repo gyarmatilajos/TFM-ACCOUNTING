@@ -25,7 +25,9 @@ A script kizárólag a név szerint rögzített helyi fejlesztési adatbázisra 
 - **Beállítások:** költségkategóriák, partnertípusok, kötelezettségtípusok, számlatípusok, fizetési módok és rendezési típusok kezelése.
 - **Adatréteg:** 12 entitás, idegen és egyedi kulcsok, verziójelzők, EF Core konfigurációk és első migráció.
 
-A következő fejlesztési lépések a fizetések, jóváírások beszámítása és a NAS-os csatolmánykezelés.
+A Tételek képernyőről elérhetők a fizetések, visszafizetések és jóváírás-beszámítások. A Pénzmozgások nézet a rendezés dátuma alapján szűr.
+
+A Beállítások alatt a **Csatolmányok mappája** gombbal választható ki a NAS-megosztás vagy a Synology Drive helyi szinkronmappája. A beállítás a Windows-felhasználó helyi profiljába kerül. Új tételnél az űrlap alján választhatók ki a csatolandó fájlok. A Mentés először a tételt rögzíti, majd csatolja a kiválasztott fájlokat, és megjeleníti az eredményt. Meglévő tétel űrlapján a **Csatolmányok** gomb közvetlenül megnyitja a feltöltést, megnyitást, másolást és megjegyzésszerkesztést támogató ablakot. Az eltávolított fájlok a beállított mappa `Torolt-dokumentumok` almappájába kerülnek. Drive használatakor a sikeres mentés a szinkronmappába másolást jelzi.
 
 ## Projektek
 
@@ -50,5 +52,3 @@ Az ellenőrző script az `obj` mappában készít segédprojektet; a solution h�
 A `TFM_ACCOUNTING_CONNECTION_STRING` környezeti változó felülírja a helyi alapértelmezést. Később ezen keresztül állítjuk be az Azure SQL-kapcsolatot, és alkalmazzuk rá a migrációkat. Most nem készült és nem módosult Azure-adatbázis. Hozzáférési adat ne kerüljön a repóba.
 
 Részletek: [helyi adatbázis](docs/local-database.md), [Saját cégek](docs/own-companies.md), [Partnerek](docs/partners.md), [adatmodell](docs/data-model.md), [Beállítások](docs/settings.md).
-
-

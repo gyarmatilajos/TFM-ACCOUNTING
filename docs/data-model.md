@@ -10,7 +10,7 @@ Az öt korábbi enum adatbázisban tárolt törzsadattá alakult: **PartnerType,
 4. **InvoiceDetails:** kötelezettséghez tartozó egy-egy kapcsolat, számlaszám (100), normál/módosító/érvénytelenítő típus, kiállítás és teljesítés dátuma, nettó és áfa. A bruttó a kötelezettségen található.
 5. **CostCategory:** közös, egyszintű kategória, egyedi név (100), megjegyzés és aktív állapot.
 6. **PaymentEntry:** kötelezettség, pénzmozgás/beszámítás típus, dátum, előjeles összeg, tényleges fizetési mód, hivatkozás (200), beszámítási csoportazonosító és megjegyzés.
-7. **Attachment:** kötelezettség, eredeti fájlnév (255), egyedi relatív NAS-út (1000), MIME-típus (100), méret és megjegyzés. Támogatott: PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV.
+7. **Attachment:** kötelezettség, eredeti fájlnév (255), egyedi Unicode relatív NAS-út (850), MIME-típus (100), méret és megjegyzés. Támogatott: PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV.
 
 Minden entitáson `RowVersion` védi a rekord módosítását/törlését. A számlaadatok kivételével automatikus létrehozási és módosítási UTC-időbélyeg található a rekordokon. A mezők részletes típusait és korlátait az entitások és az EF konfiguráció tartalmazzák.
 
@@ -24,7 +24,7 @@ Minden entitáson `RowVersion` védi a rekord módosítását/törlését. A sz�
 - Nem üres nevek/azonosítók, törzsadathivatkozások, időszakpárok és nem nulla összegek ellenőrzése.
 - A rendezés szerkezete szerint vagy fizetési mód, vagy beszámítási csoport adható meg. A rendezési típus tulajdonságaival való egyezést a későbbi Business szolgáltatás ellenőrzi.
 
-A generált NAS-út csak ASCII-azonosítókat tartalmazzon: a `varchar(1000)` mező így egyedi indexként is elfér. Az eredeti fájlnév Unicode marad. A NAS-gyökér közös konfiguráció, nem része a tárolt relatív útnak.
+Az új fájlok a beállított gyökérmappába kerülnek, az eredeti névhez fűzött egyedi azonosítóval. A relatív útvonal Unicode mezőben tárolható. A korábban mentett almappás útvonalak is feloldhatók.
 
 ## A Business műveletekben még megvalósítandó szabályok
 

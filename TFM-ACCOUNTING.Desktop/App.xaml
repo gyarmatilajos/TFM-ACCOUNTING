@@ -4,6 +4,6 @@
              xmlns:local="clr-namespace:TFM_ACCOUNTING.Desktop"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary Source="Themes/Accounting.xaml"/>
     </Application.Resources>
 </Application>

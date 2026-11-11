@@ -56,9 +56,8 @@ namespace TFM_ACCOUNTING.Data.Migrations
 
                     b.Property<string>("RelativePath")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(1000)");
+                        .HasMaxLength(850)
+                        .HasColumnType("nvarchar(850)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()

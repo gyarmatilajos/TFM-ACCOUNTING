@@ -29,6 +29,8 @@ public sealed record ObligationRow(int Id, string Company, string Partner, strin
 public sealed record ObligationQuery(string? Search = null, int? CompanyId = null, int? PartnerId = null,
     int? TypeId = null, int? CategoryId = null, bool? Archived = false, bool? HasAttachment = null,
     string? Status = null, string? DateField = null, DateOnly? From = null, DateOnly? To = null,
-    decimal? Min = null, decimal? Max = null, int Page = 1, bool NoCategory = false, string? DueState = null);
-public sealed record ObligationPage(PageResult<ObligationRow> Page, decimal Payable, decimal Credit);
+    decimal? Min = null, decimal? Max = null, int Page = 1, bool NoCategory = false, string? DueState = null,
+    string? QuickType = null);
+public sealed record ObligationPage(PageResult<ObligationRow> Page, decimal Payable, decimal Credit,
+    decimal Overdue, decimal DueSoon, decimal PaidThisMonth);
 

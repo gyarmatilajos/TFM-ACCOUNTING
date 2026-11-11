@@ -1,4 +1,5 @@
 using TFM_ACCOUNTING.Business.Obligations;
+using TFM_ACCOUNTING.Business.Attachments;
 using Microsoft.Data.SqlClient;
 using TFM_ACCOUNTING.Business.OwnCompanies;
 using TFM_ACCOUNTING.Business.Partners;
@@ -14,6 +15,8 @@ public sealed class ApplicationServices
         var connection = connectionString ?? AccountingDatabase.ResolveConnectionString();
         var factory = AccountingDatabase.CreateFactory(connection);
         Obligations = new ObligationService(factory);
+        AttachmentFolder = new AttachmentFolderSettings();
+        Attachments = new AttachmentService(factory, AttachmentFolder);
         OwnCompanies = new OwnCompanyService(factory);
         Partners = new PartnerService(factory);
         Settings = new SettingsServiceFactory(factory);
@@ -24,6 +27,8 @@ public sealed class ApplicationServices
     }
 
     public ObligationService Obligations { get; }
+    public AttachmentFolderSettings AttachmentFolder { get; }
+    public AttachmentService Attachments { get; }
     public IOwnCompanyService OwnCompanies { get; }
     public IPartnerService Partners { get; }
     public SettingsServiceFactory Settings { get; }

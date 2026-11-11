@@ -144,8 +144,8 @@ public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachmen
     {
         ConfigurationDefaults.Common(b);
         b.Property(x => x.OriginalFileName).HasMaxLength(255).IsRequired();
-        // Generated paths contain ASCII IDs only: varchar keeps the unique index below SQL Server's key size limit.
-        b.Property(x => x.RelativePath).HasMaxLength(1000).IsUnicode(false).IsRequired();
+        // Unicode preserves original filenames, and 850 characters fit the unique index's 1700-byte key limit.
+        b.Property(x => x.RelativePath).HasMaxLength(850).IsRequired();
         b.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
         b.HasIndex(x => x.RelativePath).IsUnique();
         b.HasOne(x => x.Obligation).WithMany(x => x.Attachments).HasForeignKey(x => x.ObligationId).OnDelete(DeleteBehavior.Restrict);

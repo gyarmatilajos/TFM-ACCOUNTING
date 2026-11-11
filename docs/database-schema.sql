@@ -176,7 +176,7 @@ CREATE TABLE [Attachments] (
     [Id] int NOT NULL IDENTITY,
     [ObligationId] int NOT NULL,
     [OriginalFileName] nvarchar(255) NOT NULL,
-    [RelativePath] varchar(1000) NOT NULL,
+    [RelativePath] nvarchar(850) NOT NULL,
     [ContentType] nvarchar(100) NOT NULL,
     [FileSizeBytes] bigint NOT NULL,
     [Notes] nvarchar(2000) NULL,

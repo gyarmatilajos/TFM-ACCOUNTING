@@ -1,18 +1,18 @@
-<UserControl x:Class="TFM_ACCOUNTING.Desktop.Views.SettingsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" FontSize="14">
+<UserControl xmlns:ui="clr-namespace:TFM_ACCOUNTING.Desktop.Views" x:Class="TFM_ACCOUNTING.Desktop.Views.SettingsView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" FontSize="14">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanVisibility" />
-        <Style TargetType="Button">
+        <Style TargetType="Button" BasedOn="{StaticResource RoundedButton}">
             <Setter Property="Padding" Value="16,9" />
             <Setter Property="Margin" Value="0,0,8,0" />
             <Setter Property="Background" Value="White" />
             <Setter Property="BorderBrush" Value="#CBD5E1" />
         </Style>
-        <Style TargetType="TextBox">
+        <Style TargetType="TextBox" BasedOn="{StaticResource AccountingInput}">
             <Setter Property="Padding" Value="9,7" />
             <Setter Property="Margin" Value="0,5,0,16" />
         </Style>
     </UserControl.Resources>
-    <Grid Background="#F4F6FA">
+    <Grid Background="{StaticResource Workspace}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="220" /><ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -24,6 +24,7 @@
                     
                     <TextBlock Text="Törzsadatok kezelése" Foreground="#64748B" Margin="0,6,0,18" />
                 </StackPanel>
+                <Button DockPanel.Dock="Bottom" Content="Csatolmányok mappája" ui:AccountingUi.Glyph="&#xE8B7;" Click="OpenAttachmentFolder" Margin="0,12,0,0"/>
                 <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"
                          DisplayMemberPath="Name" IsEnabled="{Binding IsIdle}"
                          Background="Transparent" BorderThickness="0" Foreground="#102A49">
@@ -46,9 +47,9 @@
                            Foreground="#64748B" Margin="0,6,0,0" />
             </StackPanel>
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,16">
-                <Button Content="+ Új bejegyzés" Command="{Binding NewCommand}" Background="#007F87" Foreground="White" />
-                <Button Content="Frissítés" Command="{Binding ReloadCommand}" />
-                <Button Content="{Binding ToggleActiveText}" Command="{Binding ToggleActiveCommand}" />
+                <Button Content="Új bejegyzés" ui:AccountingUi.Glyph="&#xE710;" Command="{Binding NewCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" />
+                <Button Content="Frissítés" ui:AccountingUi.Glyph="&#xE72C;" Command="{Binding ReloadCommand}" />
+                <Button Content="{Binding ToggleActiveText}" Style="{StaticResource ToggleActiveButton}" Command="{Binding ToggleActiveCommand}" />
             </StackPanel>
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
@@ -60,14 +61,14 @@
                           GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" RowHeight="42"
                           Background="White" BorderBrush="#DCE3ED">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Megnevezés" Binding="{Binding Name}" Width="*" MinWidth="240" />
-                        <DataGridCheckBoxColumn Header="Aktív" Binding="{Binding IsActive}" Width="65" />
+                        <DataGridTextColumn ElementStyle="{StaticResource TableText}" Header="Megnevezés" Binding="{Binding Name}" Width="*" MinWidth="240" />
+                        <DataGridTemplateColumn Header="Állapot" CellTemplate="{StaticResource ActiveStatus}" SortMemberPath="IsActive" Width="100" />
                     </DataGrid.Columns>
                 </DataGrid>
-                <Border Grid.Column="2" Background="White" BorderBrush="#DCE3ED" BorderThickness="1" CornerRadius="8" Padding="20">
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="20">
                     <DockPanel>
-                        <Button DockPanel.Dock="Bottom" Content="Mentés" Command="{Binding SaveCommand}"
-                                Background="#007F87" Foreground="White" Margin="0,12,0,0" />
+                        <Button DockPanel.Dock="Bottom" Content="Mentés" ui:AccountingUi.Glyph="&#xE74E;" Command="{Binding SaveCommand}"
+                                Style="{StaticResource PrimaryButton}" Margin="0,12,0,0" />
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel IsEnabled="{Binding IsIdle}">
                             <TextBlock Text="{Binding EditorTitle}" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,18" />

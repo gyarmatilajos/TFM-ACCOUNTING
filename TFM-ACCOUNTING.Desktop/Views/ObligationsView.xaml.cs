@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using TFM_ACCOUNTING.Business.Attachments;
 using TFM_ACCOUNTING.Business.Common;
 using TFM_ACCOUNTING.Business.Obligations;
 
@@ -16,18 +17,20 @@ public partial class ObligationsView : UserControl
         archived = new(), attachment = new(), dateField = new(), dueState = new();
     private readonly DatePicker from = new(), to = new();
     private ObligationQuery filter = new();
+    private string quickTab = "all";
     private int total;
     private ObligationRow? Selected => Rows.SelectedItem as ObligationRow;
 
     public ObligationsView()
     {
         InitializeComponent();
-        AddFilter("Bizonylatszám / leírás", search);
-        AddFilter("Saját cég", company);
-        AddFilter("Partner", partner);
+        AddFilter("Saját cég", company, PrimaryFilters);
+        AddFilter("Partner / jogosult", partner, PrimaryFilters);
+        AddFilter("Állapot", state, PrimaryFilters);
+        AddFilter("Bizonylatszám / leírás", search, PrimaryFilters);
+        search.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) Filter(search, e); };
         AddFilter("Típus", type);
         AddFilter("Kategória", category);
-        AddFilter("Fizetési állapot", state);
         AddFilter("Esedékesség", dueState);
         AddFilter("Archiválás", archived);
         AddFilter("Csatolmány", attachment);
@@ -46,17 +49,18 @@ public partial class ObligationsView : UserControl
     }
 
     public ObligationService? Service { get; set; }
+    public AttachmentService? Attachments { get; set; }
     public bool IsBusy { get; private set; }
     public Task InitializeAsync() => RunAsync(async service =>
     {
         if (await LoadOptionsAsync(service) is not null) await LoadAsync(service);
     });
 
-    private void AddFilter(string label, FrameworkElement element)
+    private void AddFilter(string label, FrameworkElement element, Panel? area = null)
     {
         var panel = new StackPanel { Margin = new Thickness(5, 0, 5, 0) };
         ObligationEditor.Field(panel, label, element);
-        FilterFields.Children.Add(panel);
+        (area ?? FilterFields).Children.Add(panel);
     }
 
     private sealed record Choice(string Label, string Value);
@@ -97,9 +101,22 @@ public partial class ObligationsView : UserControl
         total = page.Page.TotalCount;
         Rows.ItemsSource = page.Page.Items;
         Rows.SelectedItem = page.Page.Items.FirstOrDefault(x => x.Id == select);
-        PayableLabel.Text = $"{page.Payable:N2} Ft";
-        CreditLabel.Text = $"{page.Credit:N2} Ft";
+        PayableLabel.Text = FormatMoney(page.Payable);
+        OverdueLabel.Text = FormatMoney(page.Overdue);
+        DueSoonLabel.Text = FormatMoney(page.DueSoon);
+        MonthlyPaidLabel.Text = FormatMoney(page.PaidThisMonth);
+        CreditLabel.Text = $"Felhasználható jóváírás: {FormatMoney(page.Credit)}";
         StatusLabel.Text = $"{filter.Page}. oldal / {lastPage} · {total} tétel";
+    }
+
+    private static string FormatMoney(decimal value) =>
+        value.ToString(value == decimal.Truncate(value) ? "N0" : "N2", CultureInfo.GetCultureInfo("hu-HU")) + " Ft";
+
+    private void QuickFilter(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton { Tag: string tab }) return;
+        quickTab = tab;
+        Filter(sender, e);
     }
 
     private async void Filter(object sender, RoutedEventArgs e)
@@ -113,7 +130,8 @@ public partial class ObligationsView : UserControl
         var candidate = new ObligationQuery(search.Text, ObligationEditor.Id(company), ObligationEditor.Id(partner),
             ObligationEditor.Id(type), selectedCategory == -1 ? null : selectedCategory, Flag(archived), Flag(attachment),
             Value(state), Value(dateField), ObligationEditor.Date(from), ObligationEditor.Date(to), minimum, maximum,
-            NoCategory: selectedCategory == -1, DueState: Value(dueState));
+            NoCategory: selectedCategory == -1, DueState: quickTab == "overdue" ? "overdue" : Value(dueState),
+            QuickType: quickTab is "all" or "overdue" ? null : quickTab);
         if (candidate.From > candidate.To || candidate.Min > candidate.Max)
         {
             StatusLabel.Text = "A tartomány kezdete nem lehet nagyobb a végénél.";
@@ -148,9 +166,31 @@ public partial class ObligationsView : UserControl
             if (!result.IsSuccess) { ShowError(result); return; }
             details = result.Data;
         }
-        var editor = new ObligationEditor(service, options, details) { Owner = Window.GetWindow(this) };
-        if (editor.ShowDialog() == true) await LoadAsync(service, editor.SavedId);
+        var editor = new ObligationEditor(service, options, details, Attachments) { Owner = Window.GetWindow(this) };
+        editor.ShowDialog();
+        if (editor.SavedId.HasValue || editor.HasAttachmentChanges) await LoadAsync(service, editor.SavedId ?? id);
     });
+
+    private async void OpenCashMovements(object sender, RoutedEventArgs e) => await RunAsync(service =>
+    {
+        var window = new CashMovementsWindow(service) { Owner = Window.GetWindow(this) };
+        window.ShowDialog();
+        return Task.CompletedTask;
+    });
+
+    private async void OpenSettlements(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } row) return;
+        await RunAsync(async service =>
+        {
+            var result = await service.GetSettlementsAsync(row.Id);
+            if (!result.IsSuccess) { ShowError(result); return; }
+            var window = new SettlementsWindow(service, row.Id, result.Data!) { Owner = Window.GetWindow(this) };
+            window.ShowDialog();
+            if (window.HasChanges) await LoadAsync(service, row.Id);
+        });
+    }
+
 
     private async void Archive(object sender, RoutedEventArgs e)
     {
@@ -161,7 +201,8 @@ public partial class ObligationsView : UserControl
             if (!detail.IsSuccess) { ShowError(detail); return; }
             var target = !detail.Data!.Archived;
             var prompt = target ? "Archiválod a kijelölt tételt?" : "Visszaállítod a kijelölt tételt?";
-            if (MessageBox.Show(Window.GetWindow(this), prompt, "Tétel állapota", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (!AccountingUi.Confirm(Window.GetWindow(this), "Tétel állapota", prompt,
+                    row.Archived ? "Visszaállítás" : "Archiválás", row.Archived ? "\uE7A7" : "\uE7B8", !row.Archived)) return;
             var result = await service.SetArchivedAsync(row.Id, target, detail.Data.Input.Version!);
             if (!result.IsSuccess) { ShowError(result); return; }
             await LoadAsync(service);
@@ -181,8 +222,10 @@ public partial class ObligationsView : UserControl
     private void UpdateButtons()
     {
         if (EditButton is null) return;
-        EditButton.IsEnabled = ArchiveButton.IsEnabled = Selected is not null;
+        EditButton.IsEnabled = SettlementsButton.IsEnabled = ArchiveButton.IsEnabled = Selected is not null;
+        SelectionLabel.Text = Selected is null ? "Jelölj ki egy tételt" : "1 tétel kijelölve";
         ArchiveButton.Content = Selected?.Archived == true ? "Visszaállítás" : "Archiválás";
+        AccountingUi.SetGlyph(ArchiveButton, Selected?.Archived == true ? "\uE7A7" : "\uE7B8");
         Previous.IsEnabled = filter.Page > 1;
         Next.IsEnabled = (long)filter.Page * 25 < total;
     }

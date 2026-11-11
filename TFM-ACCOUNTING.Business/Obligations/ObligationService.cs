@@ -8,7 +8,7 @@ using TFM_ACCOUNTING.Data.Entities;
 
 namespace TFM_ACCOUNTING.Business.Obligations;
 
-public sealed class ObligationService(IDbContextFactory<AccountingDbContext> factory)
+public sealed partial class ObligationService(IDbContextFactory<AccountingDbContext> factory)
 {
     public Task<Response<ObligationOptions>> OptionsAsync() => Run(async db =>
     {
@@ -49,15 +49,25 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
         if (!ValidFilter(filter))
             return Response<ObligationPage>.Invalid([new("Filter", "Ellenőrizd a tartományokat és az oldalszámot.")]);
         var amounts = FilterRows(db, filter);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var nextWeek = today.AddDays(7);
+        var monthStart = new DateOnly(today.Year, today.Month, 1);
         var totals = await amounts.GroupBy(_ => 1).Select(group => new
         {
             Count = group.Count(),
             Payable = group.Sum(x => x.Row.Amount > x.Settled ? x.Row.Amount - x.Settled : 0m),
-            Credit = group.Sum(x => x.Row.Amount < x.Settled ? x.Settled - x.Row.Amount : 0m)
+            Credit = group.Sum(x => x.Row.Amount < x.Settled ? x.Settled - x.Row.Amount : 0m),
+            Overdue = group.Sum(x => x.Row.Amount > x.Settled && x.Row.DueDate < today ? x.Row.Amount - x.Settled : 0m),
+            DueSoon = group.Sum(x => x.Row.Amount > x.Settled && x.Row.DueDate >= today && x.Row.DueDate <= nextWeek
+                ? x.Row.Amount - x.Settled : 0m)
         }).SingleOrDefaultAsync();
+        var filteredIds = amounts.Select(x => x.Row.Id);
+        var paid = await db.PaymentEntries.Where(x => x.Amount > 0 && x.SettlementGroupId == null &&
+            !x.SettlementType.IsCreditOffset && x.SettlementDate >= monthStart && x.SettlementDate <= today &&
+            filteredIds.Contains(x.ObligationId)).SumAsync(x => (decimal?)x.Amount) ?? 0m;
         var items = await Project(amounts).Skip((filter.Page - 1) * 25).Take(25).ToListAsync();
         return Response<ObligationPage>.Success(new(new(items, totals?.Count ?? 0, filter.Page, 25),
-            totals?.Payable ?? 0m, totals?.Credit ?? 0m));
+            totals?.Payable ?? 0m, totals?.Credit ?? 0m, totals?.Overdue ?? 0m, totals?.DueSoon ?? 0m, paid));
     });
 
     public Task<Response<IReadOnlyList<ObligationRow>>> ExportRowsAsync(ObligationQuery filter) => Run<IReadOnlyList<ObligationRow>>(async db =>
@@ -90,6 +100,8 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
         if (filter.CompanyId is int company) rows = rows.Where(x => x.OwnCompanyId == company);
         if (filter.PartnerId is int partner) rows = rows.Where(x => x.PartnerId == partner);
         if (filter.TypeId is int type) rows = rows.Where(x => x.ObligationTypeId == type);
+        if (filter.QuickType == "invoices") rows = rows.Where(x => x.ObligationType.HasInvoiceDetails);
+        else if (filter.QuickType is string code) rows = rows.Where(x => x.ObligationType.Code == code);
         if (filter.CategoryId is int category) rows = rows.Where(x => x.CategoryId == category);
         if (filter.NoCategory) rows = rows.Where(x => x.CategoryId == null);
         if (filter.Archived is bool archived) rows = rows.Where(x => x.IsArchived == archived);
@@ -298,7 +310,17 @@ public sealed class ObligationService(IDbContextFactory<AccountingDbContext> fac
             await using var attempt = await factory.CreateDbContextAsync();
             await using var transaction = await attempt.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             var result = await action(attempt);
-            if (result.IsSuccess) await transaction.CommitAsync();
+            if (result.IsSuccess)
+            {
+                try { await transaction.CommitAsync(); }
+                catch (Exception e) when (e is SqlException or TimeoutException)
+                {
+                    // A lost commit response does not establish whether the write succeeded.
+                    Trace.TraceError("Obligation commit outcome unknown ({0}).", e.GetType().Name);
+                    return Response<T>.Failure(ErrorCode.DatabaseUnavailable,
+                        "A mentés eredménye bizonytalan. Frissítsd az adatokat, mielőtt megismétled.");
+                }
+            }
             return result;
         });
     });
