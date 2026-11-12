@@ -171,6 +171,9 @@ internal sealed class SettlementEditor : AccountingDialog
         this.isOffset = isOffset;
         this.existing = existing;
         this.screen = screen;
+        foreach (var selector in new[] { type, method, target })
+            selector.SetResourceReference(FrameworkElement.StyleProperty, "FilterComboBox");
+
         Title = isOffset ? "Jóváírás beszámítása" : screen.Balance < 0 || existing?.Amount < 0 ? "Visszafizetés rögzítése" : "Pénzmozgás rögzítése";
         Width = 650;
         SizeToContent = SizeToContent.Height;

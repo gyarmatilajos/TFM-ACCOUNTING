@@ -26,6 +26,7 @@ static class PartnerChecks
         {
             Request(" ", "VALID"), Request("Valid", " "), Request(new string('x', 201), "VALID"),
             Request("Valid", "VALID", 0), Request("Valid", "VALID") with { Notes = new string('x', 2001) },
+            Request("Valid", "VALID") with { BankAccountNumber = new string('1', 51) },
             Request("Valid", "VALID") with { Id = 1 }
         }) Check((await service.SaveAsync(request)).ErrorCode == ErrorCode.Validation, "Partner validation accessed the database or accepted invalid values.");
         Check((await service.ListAsync(new(Page: int.MaxValue))).ErrorCode == ErrorCode.Validation, "Invalid partner page accepted.");
@@ -44,9 +45,11 @@ static class PartnerChecks
     public static async Task IntegrationAsync(IDbContextFactory<AccountingDbContext> factory)
     {
         var service = new PartnerService(factory);
-        var created = await service.SaveAsync(Request(" Beszállító Teszt Kft. ", " PARTNER-001 ") with { ShortName = " ", Notes = new string('x', 2000), City = " Budapest " });
+        var created = await service.SaveAsync(Request(" Beszállító Teszt Kft. ", " PARTNER-001 ") with
+        { ShortName = " ", Notes = new string('x', 2000), City = " Budapest ", BankAccountNumber = " 00123456-12345678 " });
         Check(created.IsSuccess, "Partner create failed: " + created.Message);
         var original = created.Data!;
+        Check((await service.GetAsync(original.Id)).Data?.BankAccountNumber == "00123456-12345678", "Partner bank account was not saved or loaded correctly.");
         Check(original is { Name: "Beszállító Teszt Kft.", ShortName: null, TaxNumber: "PARTNER-001", City: "Budapest", RowVersion.Length: 8 }, "Partner normalization failed.");
         var duplicate = await service.SaveAsync(Request("Different", "partner-001") with { ConfirmDuplicateName = true });
         Check(duplicate.ErrorCode == ErrorCode.Duplicate, "Partner tax number duplicate bypassed.");
@@ -62,8 +65,9 @@ static class PartnerChecks
         Check(unchanged.IsSuccess, "Unchanged partner name demanded repeated confirmation.");
 
         var renamed = await service.SaveAsync(Request("Másik név", original.TaxNumber) with
-        { Id = original.Id, RowVersion = original.RowVersion, ShortName = "BTS" });
+        { Id = original.Id, RowVersion = original.RowVersion, ShortName = "BTS", BankAccountNumber = "" });
         Check(renamed.IsSuccess, "Partner edit failed.");
+        Check((await service.GetAsync(original.Id)).Data is { BankAccountNumber: null }, "Cleared partner bank account was not persisted.");
         Check((await service.SaveAsync(Request("Elavult", original.TaxNumber) with { Id = original.Id, RowVersion = original.RowVersion })).ErrorCode == ErrorCode.ConcurrencyConflict, "Stale partner edit accepted.");
         var renameToExisting = await service.SaveAsync(Request(sameNameDetails.Name, original.TaxNumber) with { Id = original.Id, RowVersion = renamed.Data!.RowVersion });
         Check(renameToExisting.RequiresConfirmation, "Partner rename to duplicate name had no warning.");

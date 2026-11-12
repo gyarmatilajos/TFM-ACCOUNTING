@@ -19,14 +19,20 @@ internal sealed class ObligationEditor : AccountingDialog
     }
     private readonly ComboBox company = new(), partner = new(), type = new(), category = new(),
         payment = new(), invoiceType = new(), original = new();
-    private readonly TextBox description = new() { MaxLength = 200 }, notes = new() { MaxLength = 2000, AcceptsReturn = true, Height = 65 },
+    private readonly TextBox description = new() { MaxLength = 200 }, notes = new() { MaxLength = 2000, AcceptsReturn = true, Height = 62, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
         amount = new(),
         number = new() { MaxLength = 100 }, net = new(), vat = new();
     private readonly ComboBox year = new(), month = new();
     private readonly DatePicker due = new(), issue = new(), performance = new();
     private readonly StackPanel periodPanel = new();
     private readonly StackPanel invoicePanel = new();
+    private readonly TextBlock heading;
+    private readonly ColumnDefinition detailColumn;
     private readonly Border invoiceCard;
+    private readonly Border periodCard;
+    private readonly TextBlock invoicePeriod = new() { FontWeight = FontWeights.SemiBold, Text = "—" };
+    private readonly ListBox attachmentFiles = new() { MaxHeight = 100 };
+    private readonly TextBlock attachmentHint = new() { TextWrapping = TextWrapping.Wrap };
     private readonly Button save = AccountingUi.Action("Mentés", "\uE74E", "PrimaryButton");
     private readonly TextBlock feedback = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 8) };
     private bool loadingOriginals;
@@ -39,45 +45,73 @@ internal sealed class ObligationEditor : AccountingDialog
         this.details = details;
         this.attachments = attachments;
         Title = details is null ? "Új tétel" : "Tétel szerkesztése";
-        Width = 940;
-        MinWidth = 680;
-        Height = 780;
+        Width = Math.Min(1045, SystemParameters.WorkArea.Width);
+        MinWidth = Math.Min(750, Width);
+        Height = Math.Min(810, SystemParameters.WorkArea.Height);
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var input = details?.Input;
-        var root = new DockPanel { Margin = new Thickness(20) };
+        var root = new DockPanel { Margin = new Thickness(22, 18, 22, 16) };
         var footer = new StackPanel();
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
         footer.Children.Add(feedback);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var attachmentButton = AccountingUi.Action(details is null ? "Fájlok kiválasztása…" : "Csatolmányok", "\uE723");
-        attachmentButton.IsEnabled = attachments is not null;
-        attachmentButton.Click += (_, _) => OpenAttachments();
-        if (details is null) footer.Children.Add(CreatePendingFilesPanel());
-        buttons.Children.Add(attachmentButton);
         buttons.Children.Add(AccountingUi.Cancel());
         save.Margin = new Thickness(8, 0, 0, 0);
         buttons.Children.Add(save);
         footer.Children.Add(buttons);
-        var form = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
-        var heading = AccountingUi.Heading(Title);
-        DockPanel.SetDock(heading, Dock.Top);
-        form.Children.Add(heading);
+        var form = new StackPanel();
+        heading = AccountingUi.Heading(Title);
+        heading.Margin = new Thickness(0);
+        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 16), LastChildFill = true };
+        var headerIcon = new TextBlock { Text = "\uE7C3", FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        headerIcon.SetResourceReference(TextBlock.FontFamilyProperty, "IconFont");
+        headerIcon.SetResourceReference(TextBlock.ForegroundProperty, "Accent");
+        var iconSurface = new Border
+        {
+            Width = 44, Height = 44, CornerRadius = new CornerRadius(9), Child = headerIcon,
+            Margin = new Thickness(0, 0, 12, 0), VerticalAlignment = VerticalAlignment.Top
+        };
+        iconSurface.SetResourceReference(Border.BackgroundProperty, "InformationSurface");
+        DockPanel.SetDock(iconSurface, Dock.Left);
+        header.Children.Add(iconSurface);
+        var titleBlock = new StackPanel();
+        titleBlock.Children.Add(heading);
+        if (details is not null)
+        {
+            var subtitle = new TextBlock
+            {
+                Text = string.Join(" · ", new[] { input?.Invoice?.Number ?? $"Tétel #{details.Id}",
+                    options.Partners.FirstOrDefault(item => item.Id == input?.PartnerId)?.Name }.OfType<string>()),
+                TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0)
+            };
+            subtitle.SetResourceReference(TextBlock.ForegroundProperty, "MutedInk");
+            titleBlock.Children.Add(subtitle);
+        }
+        header.Children.Add(titleBlock);
+        form.Children.Add(header);
         var columns = new Grid();
         columns.ColumnDefinitions.Add(new ColumnDefinition());
-        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        detailColumn = new ColumnDefinition();
+        columns.ColumnDefinitions.Add(detailColumn);
         var fields = new StackPanel();
-        fields.Children.Add(AccountingUi.Heading("Alapadatok"));
+        fields.Children.Add(SectionHeading("Alapadatok"));
         columns.Children.Add(AccountingUi.Card(fields));
-        invoicePanel.Children.Add(AccountingUi.Heading("Számlaadatok"));
+        invoicePanel.Children.Add(SectionHeading("Számlaadatok"));
         invoiceCard = AccountingUi.Card(invoicePanel);
         invoiceCard.Margin = new Thickness(12, 0, 0, 0);
-        invoiceCard.Width = 340;
         Grid.SetColumn(invoiceCard, 1);
         columns.Children.Add(invoiceCard);
+        periodPanel.Children.Add(SectionHeading("Vonatkozási időszak"));
+        periodCard = AccountingUi.Card(periodPanel);
+        periodCard.Margin = new Thickness(12, 0, 0, 0);
+        periodCard.VerticalAlignment = VerticalAlignment.Top;
+        Grid.SetColumn(periodCard, 1);
+        columns.Children.Add(periodCard);
         form.Children.Add(columns);
-        root.Children.Add(new ScrollViewer { Content = form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        form.Children.Add(CreateAttachmentsCard());
+        root.Children.Add(new ScrollViewer { Content = form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 0, 0, 4) });
         Content = root;
 
         SetOptions(company, Available(options.Companies, input?.CompanyId), input?.CompanyId);
@@ -86,30 +120,47 @@ internal sealed class ObligationEditor : AccountingDialog
         SetOptions(category, Available(options.Categories, input?.CategoryId), input?.CategoryId, true);
         SetOptions(payment, Available(options.PaymentMethods, input?.PaymentMethodId), input?.PaymentMethodId, true);
         SetOptions(invoiceType, Available(options.InvoiceTypes, input?.Invoice?.TypeId), input?.Invoice?.TypeId);
+        foreach (var selector in new[] { company, partner, type, category, payment, invoiceType, original, year, month })
+            selector.SetResourceReference(FrameworkElement.StyleProperty, "FilterComboBox");
+        foreach (var datePicker in new[] { due, issue, performance }) datePicker.MinHeight = 32;
         Field(fields, "Saját cég *", company);
         Field(fields, "Partner / jogosult *", partner);
-        Field(fields, "Kötelezettségtípus *", type);
-        Field(fields, "Költségkategória", category);
-        Field(fields, "Leírás", description);
-        Field(fields, "Határidő *", due);
-        Field(fields, "Fizetendő összeg (Ft) *", amount);
-        fields.Children.Add(periodPanel);
+        AddFieldPair(fields, "Típus *", type, "Költségkategória", category);
+        AddFieldPair(fields, "Határidő *", due, "Fizetendő összeg (Ft) *", amount);
         AddPeriodFields(input);
-        Field(fields, "Tervezett fizetési mód", payment);
+        AddFieldPair(fields, "Tervezett fizetési mód", payment, "Leírás", description);
         Field(fields, "Megjegyzés", notes);
         Field(invoicePanel, "Számlaszám *", number);
         Field(invoicePanel, "Számlatípus *", invoiceType);
-        Field(invoicePanel, "Kiállítás dátuma *", issue);
-        Field(invoicePanel, "Teljesítés dátuma *", performance);
-        Field(invoicePanel, "Nettó összeg (Ft) *", net);
-        Field(invoicePanel, "Áfa összege (Ft) *", vat);
+        AddFieldPair(invoicePanel, "Kiállítás dátuma *", issue, "Teljesítés dátuma *", performance);
+        AddFieldPair(invoicePanel, "Nettó összeg (Ft) *", net, "Áfa összege (Ft) *", vat);
         Field(invoicePanel, "Eredeti számla", original);
+        var periodSummary = new DockPanel();
+        DockPanel.SetDock(invoicePeriod, Dock.Right);
+        invoicePeriod.Margin = new Thickness(8, 0, 0, 0);
+        periodSummary.Children.Add(invoicePeriod);
+        periodSummary.Children.Add(new TextBlock { Text = "Időszak a teljesítés alapján", TextWrapping = TextWrapping.Wrap });
+        var summaryCard = new Border
+        {
+            Child = periodSummary, CornerRadius = new CornerRadius(6), Padding = new Thickness(10), Margin = new Thickness(0, 8, 0, 0)
+        };
+        summaryCard.SetResourceReference(Border.BackgroundProperty, "InformationSurface");
+        invoicePanel.Children.Add(summaryCard);
         if (details is not null)
         {
             var related = new List<string>();
             related.AddRange(details.Settlements.Select(x => $"{x.Date:yyyy.MM.dd.}  {x.Amount:N2} Ft  {x.Type}  {x.Method}"));
             if (related.Count > 0)
-                Field(fields, "Rendezések", new ListBox { ItemsSource = related, MaxHeight = 150 });
+            {
+                var settlements = new StackPanel();
+                settlements.Children.Add(SectionHeading("Rendezések"));
+                var settlementList = new ListBox { ItemsSource = related, MaxHeight = 125 };
+                settlementList.SetResourceReference(FrameworkElement.StyleProperty, "RoundedListBox");
+                settlements.Children.Add(settlementList);
+                var card = AccountingUi.Card(settlements);
+                card.Margin = new Thickness(0, 12, 0, 0);
+                form.Children.Add(card);
+            }
         }
 
         description.Text = input?.Description ?? "";
@@ -125,40 +176,84 @@ internal sealed class ObligationEditor : AccountingDialog
         type.SelectionChanged += async (_, _) => await LoadOriginalsAsync();
         company.SelectionChanged += async (_, _) => await LoadOriginalsAsync();
         partner.SelectionChanged += async (_, _) => await LoadOriginalsAsync();
+        performance.SelectedDateChanged += (_, _) => UpdateInvoicePeriod();
         Loaded += async (_, _) => await LoadOriginalsAsync(input?.OriginalId);
         save.Click += async (_, _) => await SaveAsync();
         Closing += (_, e) => { if (saving) e.Cancel = true; };
         UpdateInvoiceVisibility();
+        UpdateInvoicePeriod();
     }
 
     public int? SavedId { get; private set; }
     public bool HasAttachmentChanges { get; private set; }
 
-    private FrameworkElement CreatePendingFilesPanel()
+    private FrameworkElement CreateAttachmentsCard()
     {
-        var panel = new DockPanel { Margin = new Thickness(0, 0, 0, 10), Visibility = Visibility.Collapsed };
-        var list = new ListBox { ItemsSource = pendingFiles, DisplayMemberPath = nameof(PendingAttachment.Name), MaxHeight = 95 };
-        var remove = AccountingUi.Action("Levétel a listáról", "\uE74D");
-        remove.Margin = new Thickness(8, 0, 0, 0);
-        remove.VerticalAlignment = VerticalAlignment.Top;
-        remove.IsEnabled = false;
-        list.SelectionChanged += (_, _) => remove.IsEnabled = list.SelectedItem is PendingAttachment;
-        remove.Click += (_, _) =>
+        var section = new StackPanel();
+        section.Children.Add(SectionHeading("Csatolmányok"));
+        var row = new DockPanel();
+        var actions = new WrapPanel { VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(12, 0, 0, 0) };
+        DockPanel.SetDock(actions, Dock.Right);
+        row.Children.Add(actions);
+        if (details is null)
         {
-            if (list.SelectedItem is PendingAttachment selected) pendingFiles.Remove(selected);
-        };
-        pendingFiles.CollectionChanged += (_, _) =>
-            panel.Visibility = pendingFiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        var label = new TextBlock { Text = "Mentéskor csatolandó fájlok", Margin = new Thickness(0, 0, 0, 5) };
-        DockPanel.SetDock(label, Dock.Top);
-        DockPanel.SetDock(remove, Dock.Right);
-        panel.Children.Add(label);
-        panel.Children.Add(remove);
-        panel.Children.Add(list);
-        return panel;
+            var remove = AccountingUi.Action("Levétel", "\uE74D");
+            remove.IsEnabled = false;
+            remove.Visibility = Visibility.Collapsed;
+            attachmentFiles.SelectionChanged += (_, _) => remove.IsEnabled = attachmentFiles.SelectedItem is PendingAttachment;
+            remove.Click += (_, _) =>
+            {
+                if (attachmentFiles.SelectedItem is PendingAttachment selected) pendingFiles.Remove(selected);
+            };
+            pendingFiles.CollectionChanged += (_, _) =>
+            {
+                remove.Visibility = pendingFiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+                UpdateAttachmentHint(pendingFiles.Count);
+            };
+            actions.Children.Add(remove);
+            attachmentFiles.ItemsSource = pendingFiles;
+            attachmentFiles.DisplayMemberPath = nameof(PendingAttachment.Name);
+            UpdateAttachmentHint(pendingFiles.Count);
+        }
+        else
+        {
+            SetExistingAttachments(details.Attachments.Select(file => file.Name));
+        }
+
+        var manage = AccountingUi.Action(details is null ? "Fájlok kiválasztása" : "Csatolmányok", "\uE723");
+        manage.Margin = new Thickness(0);
+        manage.IsEnabled = attachments is not null;
+        manage.Click += async (_, _) => await OpenAttachmentsAsync();
+        actions.Children.Add(manage);
+        var files = new StackPanel();
+        attachmentFiles.SetResourceReference(FrameworkElement.StyleProperty, "RoundedListBox");
+        attachmentHint.SetResourceReference(TextBlock.ForegroundProperty, "MutedInk");
+        attachmentHint.Margin = new Thickness(0, 0, 0, 5);
+        files.Children.Add(attachmentHint);
+        files.Children.Add(attachmentFiles);
+        row.Children.Add(files);
+        section.Children.Add(row);
+        var card = AccountingUi.Card(section);
+        card.Margin = new Thickness(0, 12, 0, 0);
+        return card;
     }
 
-    private void OpenAttachments()
+    private void SetExistingAttachments(IEnumerable<string> names)
+    {
+        var files = names.ToArray();
+        attachmentFiles.ItemsSource = files;
+        UpdateAttachmentHint(files.Length);
+    }
+
+    private void UpdateAttachmentHint(int count)
+    {
+        attachmentFiles.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        attachmentHint.Visibility = details is not null && count > 0 ? Visibility.Collapsed : Visibility.Visible;
+        attachmentHint.Text = details is not null ? "Nincs csatolmány."
+            : count > 0 ? "Mentésre vár" : "Válaszd ki a mentéskor csatolandó fájlokat.";
+    }
+
+    private async Task OpenAttachmentsAsync()
     {
         if (attachments is not { } service || saving) return;
         if (details is { } existing)
@@ -167,6 +262,12 @@ internal sealed class ObligationEditor : AccountingDialog
             var window = new AttachmentsWindow(service, existing.Id, title) { Owner = this };
             window.ShowDialog();
             HasAttachmentChanges |= window.HasChanges;
+            if (window.HasChanges)
+            {
+                var files = await service.ListAsync(existing.Id);
+                if (files.IsSuccess) SetExistingAttachments(files.Data!.Select(file => file.OriginalFileName));
+                else feedback.Text = SettlementsWindow.Error(files);
+            }
             return;
         }
         foreach (var path in AttachmentsWindow.PickFiles(this))
@@ -182,6 +283,23 @@ internal sealed class ObligationEditor : AccountingDialog
         panel.Children.Add(new TextBlock { Text = label, Margin = new Thickness(0, 4, 0, 3) });
         control.Margin = new Thickness(0, 0, 0, 8);
         panel.Children.Add(control);
+    }
+
+    private static TextBlock SectionHeading(string text) => new()
+    {
+        Text = text, FontSize = 17, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8)
+    };
+
+    private static void AddFieldPair(Panel panel, string leftLabel, FrameworkElement left, string rightLabel, FrameworkElement right)
+    {
+        var pair = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
+        var leftField = new StackPanel { Margin = new Thickness(0, 0, 6, 0) };
+        var rightField = new StackPanel { Margin = new Thickness(6, 0, 0, 0) };
+        Field(leftField, leftLabel, left);
+        Field(rightField, rightLabel, right);
+        pair.Children.Add(leftField);
+        pair.Children.Add(rightField);
+        panel.Children.Add(pair);
     }
 
     internal static void SetOptions(ComboBox box, IEnumerable<ObligationOption> values, int? selected, bool optional = false, string emptyLabel = "—")
@@ -215,23 +333,24 @@ internal sealed class ObligationEditor : AccountingDialog
         ScrollViewer.SetCanContentScroll(year, true);
         SetOptions(year, yearOptions, input is null ? today.Year : input.Year, true);
         SetOptions(month, monthOptions, input is null ? today.Month : input.Month, true);
-
-        var selectors = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
-        var yearField = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
-        var monthField = new StackPanel();
-        Field(yearField, "Vonatkozási év", year);
-        Field(monthField, "Vonatkozási hónap", month);
-        selectors.Children.Add(yearField);
-        selectors.Children.Add(monthField);
-        periodPanel.Children.Add(selectors);
+        AddFieldPair(periodPanel, "Év", year, "Hónap", month);
     }
 
     private void UpdateInvoiceVisibility()
     {
         var selectedType = type.SelectedItem as ObligationOption;
         invoiceCard.Visibility = selectedType?.HasInvoiceDetails == true ? Visibility.Visible : Visibility.Collapsed;
-        periodPanel.Visibility = selectedType is { HasInvoiceDetails: false } ? Visibility.Visible : Visibility.Collapsed;
+        periodCard.Visibility = selectedType is { HasInvoiceDetails: false } ? Visibility.Visible : Visibility.Collapsed;
+        detailColumn.Width = selectedType is null ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        if (details is null)
+        {
+            Title = selectedType is null ? "Új tétel" : $"Új tétel · {selectedType.Name}";
+            heading.Text = Title;
+        }
     }
+
+    private void UpdateInvoicePeriod() => invoicePeriod.Text =
+        performance.SelectedDate?.ToString("yyyy. MMMM", CultureInfo.GetCultureInfo("hu-HU")) ?? "—";
 
     private async Task LoadOriginalsAsync(int? selected = null)
     {

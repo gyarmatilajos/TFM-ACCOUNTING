@@ -76,14 +76,10 @@ public partial class MainWindow : Window
             companiesLoaded = true;
         }
     }
-    private async void ShowSettings(object sender, RoutedEventArgs e) => await OpenSettingsAsync("settings");
-
-    private async void ShowCategories(object sender, RoutedEventArgs e) => await OpenSettingsAsync("categories");
-
-    private async Task OpenSettingsAsync(string page)
+    private async void ShowSettings(object sender, RoutedEventArgs e)
     {
-        if (currentPage == page || !MayLeaveCurrentPage()) return;
-        currentPage = page;
+        if (currentPage == "settings" || !MayLeaveCurrentPage()) return;
+        currentPage = "settings";
         UpdateNavigation();
         ObligationsView.Visibility = Visibility.Collapsed;
         CompaniesView.Visibility = Visibility.Collapsed;
@@ -94,8 +90,6 @@ public partial class MainWindow : Window
             await settings.InitializeAsync();
             settingsLoaded = true;
         }
-        if (page == "categories" && settings is not null)
-            settings.SelectedGroup = settings.Groups.First(x => x.Key == "cost-categories");
     }
 
     private async void ShowPartners(object sender, RoutedEventArgs e)
@@ -129,7 +123,6 @@ public partial class MainWindow : Window
         Highlight(CompaniesButton, currentPage == "companies");
         Highlight(ObligationsButton, currentPage == "obligations");
         Highlight(PartnersButton, currentPage == "partners");
-        Highlight(CategoriesButton, currentPage == "categories");
         Highlight(SettingsButton, currentPage == "settings");
     }
 }

@@ -26,7 +26,7 @@ public sealed class PartnersViewModel : INotifyPropertyChanged
     private bool isDirty;
     private bool loadingEditor;
     private string name = "";
-    private string? shortName, taxNumber, postalCode, city, addressLine, notes;
+    private string? shortName, taxNumber, bankAccountNumber, postalCode, city, addressLine, notes;
     private bool isActive = true, generateInternalIdentifier;
     private int page = 1, totalCount;
 
@@ -91,6 +91,7 @@ public sealed class PartnersViewModel : INotifyPropertyChanged
     public string Name { get => name; set => Edit(ref name, value); }
     public string? ShortName { get => shortName; set => Edit(ref shortName, value); }
     public string? TaxNumber { get => taxNumber; set => Edit(ref taxNumber, value); }
+    public string? BankAccountNumber { get => bankAccountNumber; set => Edit(ref bankAccountNumber, value); }
     public string? PostalCode { get => postalCode; set => Edit(ref postalCode, value); }
     public string? City { get => city; set => Edit(ref city, value); }
     public string? AddressLine { get => addressLine; set => Edit(ref addressLine, value); }
@@ -134,7 +135,8 @@ public sealed class PartnersViewModel : INotifyPropertyChanged
     private Task SaveAsync() => RunAsync(async () =>
     {
         var request = new SavePartnerRequest(editing?.Id, Name, ShortName, TaxNumber, PostalCode, City,
-            AddressLine, Notes, SelectedPartnerType?.Id ?? 0, IsActive, GenerateInternalIdentifier, editing?.RowVersion);
+            AddressLine, Notes, SelectedPartnerType?.Id ?? 0, IsActive, GenerateInternalIdentifier, editing?.RowVersion,
+            BankAccountNumber: BankAccountNumber);
         var response = await service.SaveAsync(request);
         if (response.RequiresConfirmation)
         {
@@ -212,6 +214,7 @@ public sealed class PartnersViewModel : INotifyPropertyChanged
         Changed(nameof(SelectableTypes));
         SelectedPartnerType = PartnerTypes.FirstOrDefault(x => x.Id == partner.PartnerTypeId);
         Name = partner.Name; ShortName = partner.ShortName; TaxNumber = partner.TaxNumber;
+        BankAccountNumber = partner.BankAccountNumber;
         PostalCode = partner.PostalCode; City = partner.City; AddressLine = partner.AddressLine;
         Notes = partner.Notes; IsActive = partner.IsActive; GenerateInternalIdentifier = false;
         loadingEditor = false; IsDirty = false;

@@ -106,6 +106,7 @@ public sealed class PartnerService(IDbContextFactory<AccountingDbContext> contex
         partner.PartnerTypeId = type.Id;
         partner.ShortName = Optional(request.ShortName);
         partner.TaxNumber = taxNumber;
+        partner.BankAccountNumber = Optional(request.BankAccountNumber);
         partner.PostalCode = Optional(request.PostalCode);
         partner.City = Optional(request.City);
         partner.AddressLine = Optional(request.AddressLine);
@@ -144,6 +145,7 @@ public sealed class PartnerService(IDbContextFactory<AccountingDbContext> contex
         if (request.PartnerTypeId <= 0) errors.Add(new("PartnerTypeId", "A partnertípus kiválasztása kötelező."));
         Text("ShortName", request.ShortName, 50);
         if (!request.GenerateInternalIdentifier) Text("TaxNumber", request.TaxNumber, 20, true);
+        Text(nameof(request.BankAccountNumber), request.BankAccountNumber, 50);
         Text("PostalCode", request.PostalCode, 10);
         Text("City", request.City, 100);
         Text("AddressLine", request.AddressLine, 200);
@@ -155,7 +157,8 @@ public sealed class PartnerService(IDbContextFactory<AccountingDbContext> contex
 
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static PartnerDetails ToDetails(Partner x) => new(x.Id, x.Name, x.ShortName, x.TaxNumber,
-        x.PostalCode, x.City, x.AddressLine, x.Notes, x.IsActive, x.RowVersion.ToArray(), x.PartnerTypeId, x.PartnerType.Name);
+        x.PostalCode, x.City, x.AddressLine, x.Notes, x.IsActive, x.RowVersion.ToArray(), x.PartnerTypeId, x.PartnerType.Name,
+        x.BankAccountNumber);
     private static Response<PartnerDetails> Missing() => Response<PartnerDetails>.Failure(ErrorCode.NotFound, "A partner már nem található.");
     private static Response<PartnerDetails> Conflict() => Response<PartnerDetails>.Failure(ErrorCode.ConcurrencyConflict,
         "A partner adatait időközben másik kliens módosította. Frissítsd az adatokat, majd ismételd meg a módosítást.");

@@ -8,6 +8,7 @@ public sealed class Partner : IAuditable
     public int PartnerTypeId { get; set; }
     public PartnerType PartnerType { get; set; } = null!;
     public required string TaxNumber { get; set; }
+    public string? BankAccountNumber { get; set; }
     public string? PostalCode { get; set; }
     public string? City { get; set; }
     public string? AddressLine { get; set; }

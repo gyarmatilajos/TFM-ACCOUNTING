@@ -7,7 +7,7 @@
             <Setter Property="Background" Value="White" /><Setter Property="BorderBrush" Value="#CBD5E1" />
         </Style>
         <Style TargetType="TextBox" BasedOn="{StaticResource AccountingInput}"><Setter Property="Padding" Value="8,6" /><Setter Property="Margin" Value="0,4,0,12" /></Style>
-        <Style TargetType="ComboBox"><Setter Property="Padding" Value="7" /></Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource FilterComboBox}" />
     </UserControl.Resources>
     <Grid Background="{StaticResource Workspace}" Margin="26">
         <Grid.RowDefinitions>
@@ -35,8 +35,8 @@
                          Margin="0,0,10,0" VerticalContentAlignment="Center" MaxLength="200">
                     <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SearchCommand}" /></TextBox.InputBindings>
                 </TextBox>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" DisplayMemberPath="Name" Margin="0,0,10,0" />
-                <ComboBox Grid.Column="2" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Name" Margin="0,0,10,0" />
+                <ComboBox Grid.Column="1" Style="{StaticResource FilterComboBox}" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" DisplayMemberPath="Name" Margin="0,0,10,0" />
+                <ComboBox Grid.Column="2" Style="{StaticResource FilterComboBox}" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Name" Margin="0,0,10,0" />
                 <CheckBox Grid.Column="3" Content="Csökkenő" IsChecked="{Binding Descending}" VerticalAlignment="Center" />
                 <Button Grid.Column="4" Content="Keresés" ui:AccountingUi.Glyph="&#xE721;" Command="{Binding SearchCommand}" Margin="0" />
             </Grid>
@@ -47,7 +47,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,12,0,0">
                     <Button Content="Előző" ui:AccountingUi.Glyph="&#xE76B;" Command="{Binding PreviousPageCommand}" />
-                    <Button Content="Következő" ui:AccountingUi.Glyph="&#xE76C;" Command="{Binding NextPageCommand}" />
+                    <Button Content="Következő" ui:AccountingUi.Glyph="&#xE76C;" ui:AccountingUi.GlyphAfterContent="True" Command="{Binding NextPageCommand}" />
                     <TextBlock Text="{Binding PageText}" VerticalAlignment="Center" Foreground="#64748B" />
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" IsEnabled="{Binding IsIdle}"
@@ -80,6 +80,8 @@
                             <TextBlock Text="Adószám / azonosító *" />
                             <TextBox Text="{Binding TaxNumber, UpdateSourceTrigger=PropertyChanged}" MaxLength="20" IsEnabled="{Binding CanEditTaxNumber}" />
                             <CheckBox Content="Belső azonosító automatikus generálása" IsChecked="{Binding GenerateInternalIdentifier}" Margin="0,0,0,16" />
+                            <Label Content="Bankszámlaszám" Target="{Binding ElementName=BankAccountInput}" Padding="0" />
+                            <TextBox x:Name="BankAccountInput" Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" MaxLength="50" />
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="90" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <StackPanel><TextBlock Text="Irányítószám" /><TextBox Text="{Binding PostalCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="10" /></StackPanel>

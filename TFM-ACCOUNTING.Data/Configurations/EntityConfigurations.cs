@@ -47,6 +47,7 @@ public sealed class PartnerConfiguration : IEntityTypeConfiguration<Partner>
     public void Configure(EntityTypeBuilder<Partner> b)
     {
         ConfigurationDefaults.Party(b);
+        b.Property(x => x.BankAccountNumber).HasMaxLength(50);
         b.HasOne(x => x.PartnerType).WithMany().HasForeignKey(x => x.PartnerTypeId).OnDelete(DeleteBehavior.Restrict);
         b.ToTable("Partners", t =>
         {

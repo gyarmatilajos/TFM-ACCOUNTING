@@ -12,6 +12,12 @@ public static class AccountingUi
     public static string GetGlyph(DependencyObject element) => (string)element.GetValue(GlyphProperty);
     public static void SetGlyph(DependencyObject element, string value) => element.SetValue(GlyphProperty, value);
 
+    public static readonly DependencyProperty GlyphAfterContentProperty =
+        DependencyProperty.RegisterAttached("GlyphAfterContent", typeof(bool), typeof(AccountingUi), new PropertyMetadata(false));
+
+    public static bool GetGlyphAfterContent(DependencyObject element) => (bool)element.GetValue(GlyphAfterContentProperty);
+    public static void SetGlyphAfterContent(DependencyObject element, bool value) => element.SetValue(GlyphAfterContentProperty, value);
+
     internal static Button Action(string label, string glyph, string? style = null)
     {
         var button = new Button { Content = label, Margin = new Thickness(0, 0, 8, 0) };

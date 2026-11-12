@@ -18,11 +18,12 @@ public sealed record PartnerListItem(int Id, string Name, string? ShortName, str
 
 public sealed record PartnerDetails(int Id, string Name, string? ShortName, string TaxNumber,
     string? PostalCode, string? City, string? AddressLine, string? Notes, bool IsActive, byte[] RowVersion,
-    int PartnerTypeId, string PartnerTypeName);
+    int PartnerTypeId, string PartnerTypeName, string? BankAccountNumber = null);
 
 public sealed record SavePartnerRequest(int? Id, string Name, string? ShortName, string? TaxNumber,
     string? PostalCode, string? City, string? AddressLine, string? Notes, int PartnerTypeId, bool IsActive = true,
-    bool GenerateInternalIdentifier = false, byte[]? RowVersion = null, bool ConfirmDuplicateName = false);
+    bool GenerateInternalIdentifier = false, byte[]? RowVersion = null, bool ConfirmDuplicateName = false,
+    string? BankAccountNumber = null);
 
 public interface IPartnerService
 {

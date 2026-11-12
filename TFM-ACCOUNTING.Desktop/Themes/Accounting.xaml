@@ -9,6 +9,7 @@
     <SolidColorBrush x:Key="TealLight" Color="#08BCC9"/>
     <SolidColorBrush x:Key="SuccessSurface" Color="#E6F4EB"/>
     <SolidColorBrush x:Key="WarningSurface" Color="#FFF2DC"/>
+    <SolidColorBrush x:Key="InformationSurface" Color="#E9F3FD"/>
     <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
 
     <Style TargetType="Button" x:Key="RoundedButton">
@@ -28,17 +29,26 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
                             <TextBlock x:Name="ActionIcon" Text="{TemplateBinding ui:AccountingUi.Glyph}"
                                        FontFamily="{StaticResource IconFont}" FontSize="15" FontWeight="Normal"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ContentPresenter RecognizesAccessKey="True" VerticalAlignment="Center"/>
-                        </StackPanel>
+                            <ContentPresenter x:Name="ActionContent" Grid.Column="1" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="ui:AccountingUi.Glyph" Value="">
                             <Setter TargetName="ActionIcon" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="ui:AccountingUi.GlyphAfterContent" Value="True">
+                            <Setter TargetName="ActionIcon" Property="Grid.Column" Value="1"/>
+                            <Setter TargetName="ActionIcon" Property="Margin" Value="8,0,0,0"/>
+                            <Setter TargetName="ActionContent" Property="Grid.Column" Value="0"/>
                         </Trigger>
                         <Trigger Property="ui:AccountingUi.Glyph" Value="&#x267B;">
                             <Setter TargetName="ActionIcon" Property="FontFamily" Value="Segoe UI Symbol"/>
@@ -209,6 +219,94 @@
         </Setter>
     </Style>
     <Style TargetType="TextBox" BasedOn="{StaticResource AccountingInput}"/>
+    <Style TargetType="DatePicker">
+        <Setter Property="Language" Value="hu-HU"/>
+        <Setter Property="SelectedDateFormat" Value="Short"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="CalendarStyle">
+            <Setter.Value>
+                <Style TargetType="Calendar">
+                    <Setter Property="Language" Value="hu-HU"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Grid x:Name="PART_Root">
+                        <Border x:Name="DateBorder" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5" Padding="2">
+                            <DockPanel>
+                                <Button x:Name="PART_Button" DockPanel.Dock="Right" Style="{StaticResource RoundedButton}"
+                                        Width="28" MinHeight="0" Padding="0"
+                                        Background="Transparent" BorderBrush="Transparent" Focusable="False"
+                                        Foreground="{StaticResource MutedInk}" AutomationProperties.Name="Naptár megnyitása"
+                                        ToolTip="Naptár megnyitása">
+                                    <TextBlock Text="&#xE787;" Style="{StaticResource Icon}" FontSize="15"/>
+                                </Button>
+                                <DatePickerTextBox x:Name="PART_TextBox" Background="Transparent" Foreground="{TemplateBinding Foreground}">
+                                    <DatePickerTextBox.Template>
+                                        <ControlTemplate TargetType="DatePickerTextBox">
+                                            <Grid Background="Transparent" Margin="6,0,0,0">
+                                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="DateHint" Text="Válassz dátumot" Foreground="{StaticResource MutedInk}"
+                                                           VerticalAlignment="Center" IsHitTestVisible="False" Visibility="Collapsed"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="Text" Value="">
+                                                    <Setter TargetName="DateHint" Property="Visibility" Value="Visible"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </DatePickerTextBox.Template>
+                                </DatePickerTextBox>
+                            </DockPanel>
+                        </Border>
+                        <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=DateBorder}"
+                               StaysOpen="False" AllowsTransparency="True"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="DateBorder" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="DateBorder" Property="Opacity" Value="0.55"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ListBox" x:Key="RoundedListBox">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="5"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="5">
+                        <ScrollViewer Focusable="False"
+                                      VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                      HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                      CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style TargetType="RadioButton" x:Key="ListTab">
         <Setter Property="Foreground" Value="{StaticResource MutedInk}"/>
         <Setter Property="Padding" Value="15,9"/>

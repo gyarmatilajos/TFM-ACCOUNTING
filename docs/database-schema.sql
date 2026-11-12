@@ -122,6 +122,7 @@ CREATE TABLE [Partners] (
     [ShortName] nvarchar(50) NULL,
     [PartnerTypeId] int NOT NULL,
     [TaxNumber] nvarchar(20) NOT NULL,
+    [BankAccountNumber] nvarchar(50) NULL,
     [PostalCode] nvarchar(10) NULL,
     [City] nvarchar(100) NULL,
     [AddressLine] nvarchar(200) NULL,

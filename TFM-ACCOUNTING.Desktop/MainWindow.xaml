@@ -39,9 +39,6 @@
                     <Button x:Name="PartnersButton" Style="{StaticResource NavigationButton}" Click="ShowPartners">
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE716;" Style="{StaticResource Icon}" Margin="0,0,13,0"/><TextBlock Text="Partnerek"/></StackPanel>
                     </Button>
-                    <Button x:Name="CategoriesButton" Style="{StaticResource NavigationButton}" Click="ShowCategories">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8EC;" Style="{StaticResource Icon}" Margin="0,0,13,0"/><TextBlock Text="Kategóriák"/></StackPanel>
-                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>

@@ -32,8 +32,8 @@
                          Margin="0,0,10,0" VerticalContentAlignment="Center" MaxLength="200">
                     <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SearchCommand}" /></TextBox.InputBindings>
                 </TextBox>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" DisplayMemberPath="Name" Margin="0,0,10,0" />
-                <ComboBox Grid.Column="2" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Name" Margin="0,0,10,0" />
+                <ComboBox Grid.Column="1" Style="{StaticResource FilterComboBox}" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" DisplayMemberPath="Name" Margin="0,0,10,0" />
+                <ComboBox Grid.Column="2" Style="{StaticResource FilterComboBox}" ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort}" DisplayMemberPath="Name" Margin="0,0,10,0" />
                 <CheckBox Grid.Column="3" Content="Csökkenő" IsChecked="{Binding Descending}" VerticalAlignment="Center" />
                 <Button Grid.Column="4" Content="Keresés" ui:AccountingUi.Glyph="&#xE721;" Command="{Binding SearchCommand}" Margin="0" />
             </Grid>
@@ -43,7 +43,7 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,12,0,0">
                     <Button Content="Előző" ui:AccountingUi.Glyph="&#xE76B;" Command="{Binding PreviousPageCommand}" />
-                    <Button Content="Következő" ui:AccountingUi.Glyph="&#xE76C;" Command="{Binding NextPageCommand}" />
+                    <Button Content="Következő" ui:AccountingUi.Glyph="&#xE76C;" ui:AccountingUi.GlyphAfterContent="True" Command="{Binding NextPageCommand}" />
                     <TextBlock Text="{Binding PageText}" VerticalAlignment="Center" Foreground="#64748B" />
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" IsEnabled="{Binding IsIdle}"
